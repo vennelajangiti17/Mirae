@@ -1,1 +1,48 @@
-
+<!DOCTYPE html>
+<html>
+<head>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      width: 250px;
+      padding: 15px;
+      background: #0F172A; /* Mirae Dark Theme */
+      color: white;
+      text-align: center;
+      margin: 0;
+    }
+    h2 {
+      margin: 0 0 10px 0;
+      color: #F59E0B; /* Orange/Yellow accent */
+      font-size: 18px;
+    }
+    p {
+      font-size: 13px;
+      color: #cbd5e1;
+      line-height: 1.4;
+      margin-bottom: 15px;
+    }
+    .btn {
+      background: #F59E0B;
+      color: #0F172A;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 6px;
+      font-weight: bold;
+      cursor: pointer;
+      width: 100%;
+      transition: background 0.2s;
+    }
+    .btn:hover {
+      background: #fbbf24;
+    }
+  </style>
+</head>
+<body>
+  <h2>Mirae AI</h2>
+  <p>Right-click on any job posting and select <b>"Save to Mirae AI Pipeline"</b> to extract and analyze the role in real-time.</p>
+  <button class="btn" id="dashboardBtn">Open Dashboard</button>
+  
+  <script src="popup.js"></script>
+</body>
+</html>
