@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route } from 'react-router';
+import { BrowserRouter, Routes, Route, useLocation } from 'react-router';
 import { Sidebar } from './components/Sidebar';
 import { Dashboard } from './components/Dashboard';
 import { Analytics } from './components/Analytics';
@@ -10,54 +10,99 @@ import { AnimatePresence } from 'motion/react';
 import { ManageResumesModal } from './components/ManageResumesModal';
 import { SocialPortfolioModal } from './components/SocialPortfolioModal';
 import { LogoutConfirmModal } from './components/LogoutConfirmModal';
+import { LandingPage } from './components/LandingPage';
+import { ProtectedRoute } from './components/ProtectedRoute';
+import { useNavigate } from 'react-router';
 
-export default function App() {
+function AppContent() {
+  const location = useLocation();
+  const navigate = useNavigate();
   const [showExtension, setShowExtension] = useState(false);
   const [showManageResumes, setShowManageResumes] = useState(false);
   const [showSocialPortfolio, setShowSocialPortfolio] = useState(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const hasBlockingOverlay = showManageResumes || showSocialPortfolio || showLogoutConfirm;
+  const authenticated = typeof window !== 'undefined' && window.localStorage.getItem('isLoggedIn') === 'true';
+  const showSidebar = authenticated && location.pathname !== '/';
 
   return (
-    <BrowserRouter>
-      <div className="min-h-screen bg-[#E5E5E5]">
-        <div
-          aria-hidden={hasBlockingOverlay}
-          className={hasBlockingOverlay ? 'pointer-events-none select-none' : undefined}
-        >
+    <div className="min-h-screen bg-background">
+      <div
+        aria-hidden={hasBlockingOverlay}
+        className={hasBlockingOverlay ? 'pointer-events-none select-none' : undefined}
+      >
+        {showSidebar && (
           <Sidebar
             onManageResumesOpen={() => setShowManageResumes(true)}
             onSocialPortfolioOpen={() => setShowSocialPortfolio(true)}
             onLogoutOpen={() => setShowLogoutConfirm(true)}
           />
-          <Routes>
-            <Route path="/" element={<Dashboard />} />
-            <Route path="/analytics" element={<Analytics />} />
-            <Route path="/calendar" element={<CalendarView />} />
-            <Route path="/settings" element={<Settings />} />
-          </Routes>
+        )}
+        <Routes>
+          <Route path="/" element={<LandingPage />} />
+          <Route
+            path="/dashboard"
+            element={(
+              <ProtectedRoute>
+                <Dashboard />
+              </ProtectedRoute>
+            )}
+          />
+          <Route
+            path="/analytics"
+            element={(
+              <ProtectedRoute>
+                <Analytics />
+              </ProtectedRoute>
+            )}
+          />
+          <Route
+            path="/calendar"
+            element={(
+              <ProtectedRoute>
+                <CalendarView />
+              </ProtectedRoute>
+            )}
+          />
+          <Route
+            path="/settings"
+            element={(
+              <ProtectedRoute>
+                <Settings />
+              </ProtectedRoute>
+            )}
+          />
+        </Routes>
 
-          {showExtension && <ExtensionPopup onClose={() => setShowExtension(false)} />}
-        </div>
-
-        <AnimatePresence>
-          {showManageResumes && (
-            <ManageResumesModal onClose={() => setShowManageResumes(false)} />
-          )}
-          {showSocialPortfolio && (
-            <SocialPortfolioModal onClose={() => setShowSocialPortfolio(false)} />
-          )}
-          {showLogoutConfirm && (
-            <LogoutConfirmModal
-              onClose={() => setShowLogoutConfirm(false)}
-              onConfirm={() => {
-                setShowLogoutConfirm(false);
-                console.log('User logged out');
-              }}
-            />
-          )}
-        </AnimatePresence>
+        {showExtension && <ExtensionPopup onClose={() => setShowExtension(false)} />}
       </div>
+
+      <AnimatePresence>
+        {showManageResumes && (
+          <ManageResumesModal onClose={() => setShowManageResumes(false)} />
+        )}
+        {showSocialPortfolio && (
+          <SocialPortfolioModal onClose={() => setShowSocialPortfolio(false)} />
+        )}
+        {showLogoutConfirm && (
+          <LogoutConfirmModal
+            onClose={() => setShowLogoutConfirm(false)}
+            onConfirm={() => {
+              setShowLogoutConfirm(false);
+              window.localStorage.removeItem('isLoggedIn');
+              navigate('/', { replace: true });
+            }}
+          />
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
+export default function App() {
+  return (
+    <BrowserRouter>
+      <AppContent />
     </BrowserRouter>
   );
 }

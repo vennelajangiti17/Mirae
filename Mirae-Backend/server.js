@@ -1,26 +1,34 @@
-// server.js
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 
-// 1. Import your new database configuration file
+// 1. Import your clean database configuration (from your main branch)
 const connectDB = require('./config/db'); 
 
-// Initialize the Express app
+// 2. Import all routes (combining your tracker with their auth)
+const jobRoutes = require('./routes/jobRoutes');
+const authRoutes = require('./routes/authRoutes');
+const trackerRoutes = require('./routes/trackerRoutes');
+
+// Initialize app
 const app = express();
 
-// Middleware
-app.use(cors());
+// Middleware - Using your friend's specific frontend security settings
+app.use(cors({
+  origin: ['http://localhost:3000', 'http://localhost:5173'],
+  credentials: true,
+}));
 app.use(express.json());
 
-// 2. Call the database connection function
+// 3. Connect to Database using your MVC setup
 connectDB();
 
-// 3. Point to the new tracker routes from your team's scaffold
-const trackerRoutes = require('./routes/trackerRoutes'); 
-app.use('/api/tracker', trackerRoutes); 
+// 4. Mount all Routes
+app.use('/api/jobs', jobRoutes);
+app.use('/api/auth', authRoutes);
+app.use('/api/tracker', trackerRoutes);
 
-// --- HEALTH CHECK ---
+// HEALTH CHECK
 app.get('/health', (req, res) => {
   res.status(200).json({ message: 'Mirae Backend is running perfectly! 🚀' });
 });
