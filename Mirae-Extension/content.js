@@ -1,5 +1,4 @@
-// content.js
-// Leaves a hidden "fingerprint" on any webpage the user visits
+// Leaves a hidden "fingerprint" on the webpage
 document.documentElement.setAttribute('data-mirae-installed', 'true');
 
 const getTextBySelector = (selectors) => {
@@ -13,8 +12,6 @@ const getTextBySelector = (selectors) => {
 };
 
 const scrapeAndSendToMirae = () => {
-  console.log("Mirae: Extracting page data...");
-
   const jobData = {
     title: getTextBySelector(['h1.top-card-layout__title', '.t-24.t-bold', 'h1', '.job-title']),
     company: getTextBySelector(['.topcard__org-name-link', '.job-details-jobs-unified-top-card__company-name', '[data-cy="company-name"]', '.company-name']),
@@ -27,19 +24,15 @@ const scrapeAndSendToMirae = () => {
     return;
   }
 
-  console.log("Mirae: Data extracted. Sending to background script...", jobData);
-
-  // 🔄 THE RELAY: Send data to the background script instead of fetching directly!
+  // Send data to the background script instead of fetching directly
   chrome.runtime.sendMessage(
     { action: "saveJob", data: jobData },
     (response) => {
-      // Catch if the extension crashed or disconnected
       if (chrome.runtime.lastError) {
         alert("❌ Mirae Error: Extension disconnected. Please refresh the page and try again.");
         return;
       }
 
-      // Handle the response from the background script
       if (response && response.success) {
         alert(`✨ Success! "${jobData.title}" analyzed by AI and saved to Mirae with a Match Score of ${response.data.job.matchScore}%!`);
       } else {
@@ -49,5 +42,11 @@ const scrapeAndSendToMirae = () => {
   );
 };
 
-// Execute the scraping function
-scrapeAndSendToMirae();
+// 👂 Listen for the trigger from either the Popup or the Right-Click Menu
+chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+  if (request.action === "triggerScrape") {
+    scrapeAndSendToMirae();
+    sendResponse({ status: "scraping_started" });
+  }
+  return true;
+});
