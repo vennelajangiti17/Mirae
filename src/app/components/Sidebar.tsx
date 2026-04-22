@@ -20,7 +20,7 @@ export function Sidebar({
   const [showProfilePopover, setShowProfilePopover] = useState(false);
 
   const navItems = [
-    { name: 'Dashboard', path: '/', icon: LayoutDashboard },
+    { name: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
     { name: 'Analytics', path: '/analytics', icon: BarChart3 },
     { name: 'Calendar', path: '/calendar', icon: Calendar },
     { name: 'Settings', path: '/settings', icon: Settings },

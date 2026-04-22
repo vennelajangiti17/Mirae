@@ -1,6 +1,7 @@
 import { Search, Plus, Paperclip, ExternalLink, Clock } from 'lucide-react';
 import { motion } from 'motion/react';
 import { useState } from 'react';
+import { useNavigate } from 'react-router';
 import { ApplicationDetail } from './ApplicationDetail';
 import { AddManualModal } from './AddManualModal';
 
@@ -92,11 +93,17 @@ export function Dashboard() {
   const [selectedApp, setSelectedApp] = useState<Application | null>(null);
   const [activeTab, setActiveTab] = useState<'jobs' | 'hackathons' | 'others'>('jobs');
   const [showAddModal, setShowAddModal] = useState(false);
+  const navigate = useNavigate();
 
   const savedApps = mockApplications.filter(app => app.stage === 'Saved');
   const appliedApps = mockApplications.filter(app => app.stage === 'Applied');
   const selectedApps = mockApplications.filter(app => app.stage === 'Selected');
   const rejectedApps = mockApplications.filter(app => app.stage === 'Rejected');
+
+  const handleLogout = () => {
+    window.localStorage.removeItem('isLoggedIn');
+    navigate('/', { replace: true });
+  };
 
   const renderCard = (app: Application, index: number, variant: 'default' | 'selected' | 'rejected' = 'default') => (
     <motion.div
@@ -150,23 +157,37 @@ export function Dashboard() {
       {/* Top Bar */}
       <div className="bg-white border-b border-[#E5E5E5] px-8 py-6 sticky top-0 z-10 shadow-sm">
         <div className="flex items-center justify-between">
-          <div className="flex-1 max-w-2xl">
-            <div className="relative">
+          <div className="flex min-w-0 flex-1 items-center gap-6">
+            <div className="min-w-0">
+              <h1 className="text-3xl font-bold text-[#000000]" style={{ fontFamily: 'var(--font-display)' }}>
+                Dashboard
+              </h1>
+              <p className="text-sm text-[#14213D] opacity-70">Manage your pipeline and momentum.</p>
+            </div>
+            <div className="relative hidden max-w-2xl flex-1 md:block">
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-[#14213D] opacity-50" />
               <input
                 type="text"
                 placeholder="Search applications... CMD+K"
-                className="w-full pl-12 pr-4 py-3 border border-[#E5E5E5] rounded-md focus:outline-none focus:ring-2 focus:ring-[#FCA311] bg-white text-[#000000]"
+                className="w-full rounded-md border border-[#E5E5E5] bg-white py-3 pl-12 pr-4 text-[#000000] focus:outline-none focus:ring-2 focus:ring-[#FCA311]"
               />
             </div>
           </div>
-          <button
-            onClick={() => setShowAddModal(true)}
-            className="ml-6 px-6 py-3 bg-[#FCA311] text-[#000000] rounded-md font-semibold hover:bg-[#fdb748] transition-all shadow-md hover:shadow-lg flex items-center gap-2"
-          >
-            <Plus className="w-5 h-5" />
-            Add Manual
-          </button>
+          <div className="ml-6 flex items-center gap-3">
+            <button
+              onClick={handleLogout}
+              className="rounded-md border border-[#E5E5E5] px-5 py-3 font-semibold text-[#14213D] transition-colors hover:border-[#FCA311] hover:text-[#FCA311]"
+            >
+              Logout
+            </button>
+            <button
+              onClick={() => setShowAddModal(true)}
+              className="flex items-center gap-2 rounded-md bg-[#FCA311] px-6 py-3 font-semibold text-[#000000] shadow-md transition-all hover:bg-[#fdb748] hover:shadow-lg"
+            >
+              <Plus className="w-5 h-5" />
+              Add Manual
+            </button>
+          </div>
         </div>
       </div>
 

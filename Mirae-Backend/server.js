@@ -1,22 +1,34 @@
-// server.js
 require('dotenv').config();
+
 const express = require('express');
 const cors = require('cors');
 const mongoose = require('mongoose');
+const jobRoutes = require('./routes/jobRoutes');
+const authRoutes = require('./routes/authRoutes');
 
 const app = express();
 
-app.use(cors());
+app.use(cors({
+  origin: ['http://localhost:3000', 'http://localhost:5173'],
+  credentials: true,
+}));
 app.use(express.json());
 
 // --- MONGODB CONNECTION ---
+console.log('MONGO_URI loaded:', process.env.MONGO_URI ? 'YES' : 'NO');
+
+if (!process.env.MONGO_URI) {
+  console.error('❌ MONGO_URI is missing. Check your .env file.');
+  process.exit(1);
+}
+
 mongoose.connect(process.env.MONGO_URI)
-  .then(() => console.log('✅ Successfully connected to MongoDB Database!'))
-  .catch((error) => console.error('❌ Error connecting to MongoDB:', error.message));
+  .then(() => console.log('MongoDB Connected'))
+  .catch((err) => console.error('MongoDB connection error:', err));
 
 // --- API ROUTES ---
-const jobRoutes = require('./routes/jobRoutes'); // Import the routes
 app.use('/api/jobs', jobRoutes); // Tell the server to use them
+app.use('/api/auth', authRoutes);
 
 // --- HEALTH CHECK ---
 app.get('/health', (req, res) => {
