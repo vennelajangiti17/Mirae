@@ -1,13 +1,12 @@
 {
   "manifest_version": 3,
-  "name": "Mirae Job Scraper",
-  "version": "1.0",
-  "description": "Extract job details and save them instantly to your Mirae dashboard.",
+  "name": "Mirae AI Job Tracker",
+  "version": "1.1",
+  "description": "Smart scraper for the Mirae application tracking dashboard.",
   "permissions": [
     "activeTab",
     "scripting",
-    "contextMenus",
-    "storage"
+    "contextMenus"
   ],
   "host_permissions": [
     "http://*/*",
@@ -18,6 +17,6 @@
   },
   "action": {
     "default_popup": "popup.html",
-    "default_title": "Save to Mirae"
+    "default_title": "Mirae"
   }
 }
