@@ -1,6 +1,7 @@
 import { X } from 'lucide-react';
 import { motion } from 'motion/react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 
 interface Props {
   onClose: () => void;
@@ -23,31 +24,46 @@ export function AddManualModal({ onClose }: Props) {
     onClose();
   };
 
-  return (
-    <>
-      {/* Full-screen overlay - #0F172A at 60% opacity with 10px blur */}
+  useEffect(() => {
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, []);
+
+  return createPortal(
+    <div
+      className="fixed inset-0 z-[2147483647]"
+      aria-modal="true"
+      role="dialog"
+      aria-labelledby="add-opportunity-modal-title"
+    >
       <motion.div
+        id="global-overlay-scrim"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
         onClick={onClose}
-        className="fixed inset-0 bg-[#0F172A] bg-opacity-60 z-[99999] flex items-center justify-center p-8"
-        style={{ backdropFilter: 'blur(10px)', WebkitBackdropFilter: 'blur(10px)' }}
-      >
-        {/* Modal Container - 500px wide with 12px border radius */}
+        className="absolute inset-0 bg-[#0B132B]/60"
+        style={{ backdropFilter: 'blur(40px)', WebkitBackdropFilter: 'blur(40px)' }}
+      />
+
+      <div className="absolute inset-0 flex items-center justify-center p-8">
         <motion.div
           initial={{ scale: 0.95, opacity: 0, y: 20 }}
           animate={{ scale: 1, opacity: 1, y: 0 }}
           exit={{ scale: 0.95, opacity: 0, y: 20 }}
           transition={{ type: 'spring', damping: 25, stiffness: 300 }}
           onClick={(e) => e.stopPropagation()}
-          className="bg-white rounded-xl w-full max-w-[500px] shadow-[0_20px_60px_rgba(0,0,0,0.4)] max-h-[85vh] overflow-hidden flex flex-col relative z-[100000]"
+          className="relative z-10 flex max-h-[85vh] w-full max-w-[500px] flex-col overflow-hidden rounded-xl border border-[#D4AF37] bg-white shadow-[0_20px_60px_rgba(0,0,0,0.4)]"
         >
           {/* Header */}
           <div className="p-6 border-b border-[#E5E5E5] flex-shrink-0">
             <div className="flex items-start justify-between">
               <div>
-                <h2 className="text-2xl font-bold text-[#000000] mb-1" style={{ fontFamily: 'var(--font-display)' }}>
+                <h2 id="add-opportunity-modal-title" className="text-2xl font-bold text-[#000000] mb-1" style={{ fontFamily: 'var(--font-display)' }}>
                   Add New Opportunity
                 </h2>
                 <p className="text-sm text-[#73766A]">Manually enter details for your tracking pipeline</p>
@@ -221,7 +237,8 @@ export function AddManualModal({ onClose }: Props) {
             </button>
           </div>
         </motion.div>
-      </motion.div>
-    </>
+      </div>
+    </div>,
+    document.body,
   );
 }

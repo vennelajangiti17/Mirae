@@ -1,0 +1,26 @@
+interface BrandLogoProps {
+  className?: string;
+}
+
+export function BrandLogo({ className }: BrandLogoProps) {
+  return (
+    <svg
+      viewBox="0 0 179 179"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      className={className}
+      aria-hidden="true"
+    >
+      <rect width="179" height="179" rx="89.5" fill="#FFBB4D" />
+      <rect x="46" y="46" width="87" height="94" rx="13" fill="#FFF6E3" stroke="#00073A" strokeWidth="6" />
+      <path d="M85 74H111" stroke="#D4D4D4" strokeWidth="3" strokeLinecap="round" />
+      <path d="M85 84H118" stroke="#D4D4D4" strokeWidth="3" strokeLinecap="round" />
+      <path d="M62 95H101" stroke="#D4D4D4" strokeWidth="3" strokeLinecap="round" />
+      <rect x="61" y="72" width="15" height="15" rx="5" fill="#FFE4AE" />
+      <circle cx="89.5" cy="36.5" r="6.5" stroke="#00073A" strokeWidth="4" />
+      <rect x="72" y="36" width="35" height="17" rx="5" fill="#00073A" />
+      <circle cx="118" cy="126" r="26" fill="#FFDC95" />
+      <path d="M109.127 115.05H126.873C127.461 115.05 127.95 115.532 127.95 116.142V139.485C127.95 139.913 127.451 140.092 127.178 139.81L119.516 131.881C118.686 131.022 117.314 131.022 116.484 131.881L108.822 139.81C108.55 140.092 108.05 139.914 108.05 139.485V116.142C108.05 115.532 108.539 115.05 109.127 115.05Z" fill="#FFF6E3" stroke="#00073A" strokeWidth="2.1" />
+    </svg>
+  );
+}
