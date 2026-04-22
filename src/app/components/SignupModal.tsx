@@ -47,13 +47,27 @@ export function SignupModal({ onClose }: SignupModalProps) {
     try {
       setIsLoading(true);
       
-      // 🔐 Create the user in the database
       const data = await authService.register(name, email, password);
       
-      // Save the token so they don't have to log in again immediately
+      // 🔐 SAVE THE TOKEN & USER NAME
       localStorage.setItem('token', data.token);
+      localStorage.setItem('userName', data.user.name); // Fixes the hardcoded sidebar name!
       localStorage.setItem('isLoggedIn', 'true');
       
+      // 🔄 SYNC WITH EXTENSION
+      const EXTENSION_ID = "bdgphanpcmamocjgmijgbpdbhhjfbcbg"; 
+      if (window.chrome && window.chrome.runtime) {
+        try {
+          window.chrome.runtime.sendMessage(
+            EXTENSION_ID, 
+            { message: "syncToken", token: data.token },
+            (response) => console.log("Extension synced:", response)
+          );
+        } catch (e) {
+          console.log("Extension not installed or not ready.");
+        }
+      }
+
       onClose();
       navigate('/dashboard', { replace: true });
     } catch (err: any) {
