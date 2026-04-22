@@ -1,8 +1,9 @@
 import { Search, Plus, Paperclip, ExternalLink, Clock } from 'lucide-react';
 import { motion } from 'motion/react';
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { ApplicationDetail } from './ApplicationDetail';
 import { AddManualModal } from './AddManualModal';
+import { getDashboardSummary, getRecentJobs } from '../services/dashboardService';
 
 interface Application {
   id: string;
@@ -15,90 +16,92 @@ interface Application {
   imageUrl: string;
 }
 
-const mockApplications: Application[] = [
-  {
-    id: '1',
-    company: 'Stripe',
-    role: 'Senior Frontend Engineer',
-    matchScore: 92,
-    appliedDate: '2d ago',
-    stage: 'Saved',
-    companyAcronym: 'ST',
-    imageUrl: 'https://images.unsplash.com/photo-1497215728101-856f4ea42174?w=400&h=200&fit=crop'
-  },
-  {
-    id: '2',
-    company: 'Vercel',
-    role: 'Full Stack Developer',
-    matchScore: 88,
-    appliedDate: '3d ago',
-    stage: 'Saved',
-    companyAcronym: 'VE',
-    imageUrl: 'https://images.unsplash.com/photo-1553877522-43269d4ea984?w=400&h=200&fit=crop'
-  },
-  {
-    id: '3',
-    company: 'Acme Corp',
-    role: 'Full-Stack Developer',
-    matchScore: 82,
-    appliedDate: '2d ago',
-    stage: 'Applied',
-    companyAcronym: 'AC',
-    imageUrl: 'https://images.unsplash.com/photo-1519389950473-47ba0277781c?w=400&h=200&fit=crop'
-  },
-  {
-    id: '4',
-    company: 'TechFlow',
-    role: 'Backend Engineer',
-    matchScore: 79,
-    appliedDate: '4d ago',
-    stage: 'Applied',
-    companyAcronym: 'TF',
-    imageUrl: 'https://images.unsplash.com/photo-1531482615713-2afd69097998?w=400&h=200&fit=crop'
-  },
-  {
-    id: '5',
-    company: 'DataCo',
-    role: 'Platform Engineer',
-    matchScore: 76,
-    appliedDate: '6d ago',
-    stage: 'Applied',
-    companyAcronym: 'DC',
-    imageUrl: 'https://images.unsplash.com/photo-1504384308090-c894fdcc538d?w=400&h=200&fit=crop'
-  },
-  {
-    id: '6',
-    company: 'GitHub',
-    role: 'Software Engineer',
-    matchScore: 94,
-    appliedDate: '1d ago',
-    stage: 'Selected',
-    companyAcronym: 'GH',
-    imageUrl: 'https://images.unsplash.com/photo-1521737711867-e3b97375f902?w=400&h=200&fit=crop'
-  },
-  {
-    id: '7',
-    company: 'StartupX',
-    role: 'Product Engineer',
-    matchScore: 65,
-    appliedDate: '1w ago',
-    stage: 'Rejected',
-    companyAcronym: 'SX',
-    imageUrl: 'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=400&h=200&fit=crop'
-  }
-];
+const formatDate = (value?: string | null) => {
+  if (!value) return 'Recently';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return 'Recently';
+  return date.toLocaleDateString();
+};
+
+const getCompanyAcronym = (company: string) =>
+  company
+    .split(' ')
+    .map((word) => word[0])
+    .join('')
+    .slice(0, 2)
+    .toUpperCase();
+
+const mapJobToApplication = (job: any): Application => ({
+  id: job._id,
+  company: job.company || 'Unknown Company',
+  role: job.title || 'Untitled Role',
+  matchScore: job.matchScore || 0,
+  appliedDate: formatDate(job.appliedDate || job.createdAt),
+  stage: job.status || 'Saved',
+  companyAcronym: getCompanyAcronym(job.company || 'UC'),
+  imageUrl: `https://ui-avatars.com/api/?name=${encodeURIComponent(
+    job.company || 'Company',
+  )}&background=14213D&color=fff&size=256`,
+});
 
 export function Dashboard() {
   const [selectedApp, setSelectedApp] = useState<Application | null>(null);
-  const [activeTab, setActiveTab] = useState<'jobs' | 'hackathons' | 'others'>('jobs');
+  const [activeTab, setActiveTab] = useState<'jobs' | 'hackathons' | 'others'>(
+    'jobs',
+  );
   const [showAddModal, setShowAddModal] = useState(false);
+  const [summary, setSummary] = useState<any>(null);
+  const [applications, setApplications] = useState<Application[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const savedApps = mockApplications.filter(app => app.stage === 'Saved');
-  const appliedApps = mockApplications.filter(app => app.stage === 'Applied');
-  const selectedApps = mockApplications.filter(app => app.stage === 'Selected');
-  const rejectedApps = mockApplications.filter(app => app.stage === 'Rejected');
+  useEffect(() => {
+    const loadDashboard = async () => {
+      try {
+        const [summaryData, recentJobs] = await Promise.all([
+          getDashboardSummary(),
+          getRecentJobs(),
+        ]);
 
-  const renderCard = (app: Application, index: number, variant: 'default' | 'selected' | 'rejected' = 'default') => (
+        setSummary(summaryData);
+        setApplications((recentJobs || []).map(mapJobToApplication));
+      } catch (error) {
+        console.error('Dashboard fetch error:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadDashboard();
+  }, []);
+
+  const savedApps = useMemo(
+    () => applications.filter((app) => app.stage === 'Saved'),
+    [applications],
+  );
+
+  const appliedApps = useMemo(
+    () =>
+      applications.filter(
+        (app) => app.stage === 'Applied' || app.stage === 'Interviewing',
+      ),
+    [applications],
+  );
+
+  const offerApps = useMemo(
+    () => applications.filter((app) => app.stage === 'Offer'),
+    [applications],
+  );
+
+  const rejectedApps = useMemo(
+    () => applications.filter((app) => app.stage === 'Rejected'),
+    [applications],
+  );
+
+  const renderCard = (
+    app: Application,
+    index: number,
+    variant: 'default' | 'selected' | 'rejected' = 'default',
+  ) => (
     <motion.div
       key={app.id}
       initial={{ opacity: 0, y: 20 }}
@@ -108,37 +111,51 @@ export function Dashboard() {
       className={`bg-white rounded-md overflow-hidden shadow-[0_4px_6px_rgba(0,0,0,0.1)] hover:shadow-[0_8px_16px_rgba(252,163,17,0.2)] transition-all duration-300 cursor-pointer group ${
         variant === 'rejected' ? 'opacity-60 grayscale-[0.3]' : ''
       } ${
-        variant === 'selected' ? 'border-2 border-[#FCA311] ring-2 ring-[#FCA311] ring-opacity-20' : ''
+        variant === 'selected'
+          ? 'border-2 border-[#FCA311] ring-2 ring-[#FCA311] ring-opacity-20'
+          : ''
       }`}
     >
       <div className="relative h-28 overflow-hidden">
-        <img src={app.imageUrl} alt={app.company} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+        <img
+          src={app.imageUrl}
+          alt={app.company}
+          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+        />
         <div className="absolute top-3 right-3 w-10 h-10 bg-[#14213D] rounded-md flex items-center justify-center text-white font-bold text-sm shadow-md">
           {app.companyAcronym}
         </div>
       </div>
+
       <div className="p-4">
         <div className="flex items-start justify-between mb-2">
           <div className="flex-1">
-            <h3 className="font-bold text-[#000000] text-lg mb-1 leading-tight">{app.role}</h3>
+            <h3 className="font-bold text-[#000000] text-lg mb-1 leading-tight">
+              {app.role}
+            </h3>
             <p className="text-sm text-[#14213D]">{app.company}</p>
           </div>
           <ExternalLink className="w-4 h-4 text-[#14213D] opacity-40 hover:opacity-100 transition-opacity flex-shrink-0 ml-2" />
         </div>
+
         <div className="flex items-center justify-between mt-4 gap-2">
-          <div className={`px-3 py-1 rounded text-xs font-semibold ${
-            variant === 'selected'
-              ? 'bg-[#059669] text-white'
-              : variant === 'rejected'
-              ? 'bg-[#E5E5E5] text-[#14213D] opacity-50'
-              : 'bg-[#d4f4dd] text-[#16a34a]'
-          }`}>
+          <div
+            className={`px-3 py-1 rounded text-xs font-semibold ${
+              variant === 'selected'
+                ? 'bg-[#059669] text-white'
+                : variant === 'rejected'
+                ? 'bg-[#E5E5E5] text-[#14213D] opacity-50'
+                : 'bg-[#d4f4dd] text-[#16a34a]'
+            }`}
+          >
             {variant === 'selected' ? 'Offer Received!' : `${app.matchScore}% Match`}
           </div>
+
           <div className="flex items-center gap-1 text-xs text-[#14213D] opacity-60">
             <Clock className="w-3 h-3" />
             <span>{app.appliedDate}</span>
           </div>
+
           <Paperclip className="w-4 h-4 text-[#14213D] opacity-40 flex-shrink-0" />
         </div>
       </div>
@@ -147,7 +164,6 @@ export function Dashboard() {
 
   return (
     <div className="ml-60 min-h-screen bg-[#E5E5E5]">
-      {/* Top Bar */}
       <div className="bg-white border-b border-[#E5E5E5] px-8 py-6 sticky top-0 z-10 shadow-sm">
         <div className="flex items-center justify-between">
           <div className="flex-1 max-w-2xl">
@@ -160,6 +176,7 @@ export function Dashboard() {
               />
             </div>
           </div>
+
           <button
             onClick={() => setShowAddModal(true)}
             className="ml-6 px-6 py-3 bg-[#FCA311] text-[#000000] rounded-md font-semibold hover:bg-[#fdb748] transition-all shadow-md hover:shadow-lg flex items-center gap-2"
@@ -170,7 +187,6 @@ export function Dashboard() {
         </div>
       </div>
 
-      {/* Sub-Navigation Tabs */}
       <div className="bg-white border-b border-[#E5E5E5] px-8 sticky top-[88px] z-10">
         <div className="flex gap-8">
           {(['jobs', 'hackathons', 'others'] as const).map((tab) => (
@@ -195,9 +211,13 @@ export function Dashboard() {
         </div>
       </div>
 
-      {/* Main Content */}
       <div className="p-8">
-        {/* Saved Section */}
+        <div className="mb-6 text-sm text-[#14213D]">
+          {loading
+            ? 'Loading dashboard...'
+            : `Total Jobs: ${summary?.totalJobs ?? 0} | Saved: ${summary?.saved ?? 0} | Applied: ${summary?.applied ?? 0} | Interviewing: ${summary?.interviewing ?? 0} | Offers: ${summary?.offers ?? 0} | Rejected: ${summary?.rejected ?? 0}`}
+        </div>
+
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -212,7 +232,6 @@ export function Dashboard() {
           </div>
         </motion.div>
 
-        {/* Applied Section */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -220,14 +239,13 @@ export function Dashboard() {
           className="mb-12"
         >
           <h2 className="text-3xl font-bold text-[#000000] mb-6" style={{ fontFamily: 'var(--font-display)' }}>
-            Applied ({appliedApps.length})
+            Applied / Interviewing ({appliedApps.length})
           </h2>
           <div className="grid grid-cols-3 gap-6">
             {appliedApps.map((app, index) => renderCard(app, index))}
           </div>
         </motion.div>
 
-        {/* Selected Section */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -235,14 +253,13 @@ export function Dashboard() {
           className="mb-12"
         >
           <h2 className="text-3xl font-bold text-[#000000] mb-6" style={{ fontFamily: 'var(--font-display)' }}>
-            Selected ({selectedApps.length})
+            Offers ({offerApps.length})
           </h2>
           <div className="grid grid-cols-3 gap-6">
-            {selectedApps.map((app, index) => renderCard(app, index, 'selected'))}
+            {offerApps.map((app, index) => renderCard(app, index, 'selected'))}
           </div>
         </motion.div>
 
-        {/* Rejected Section */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
