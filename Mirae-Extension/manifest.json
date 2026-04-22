@@ -2,11 +2,13 @@
   "manifest_version": 3,
   "name": "Mirae AI Job Tracker",
   "version": "1.1",
+  "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAv6k5p2Z9yX7m", 
   "description": "Smart scraper for the Mirae application tracking dashboard.",
   "permissions": [
     "activeTab",
     "scripting",
-    "contextMenus"
+    "contextMenus",
+    "storage"
   ],
   "host_permissions": [
     "http://*/*",
@@ -18,5 +20,17 @@
   "action": {
     "default_popup": "popup.html",
     "default_title": "Mirae"
-  }
+  },
+  "externally_connectable": {
+    "matches": [
+      "http://localhost:3000/*",
+      "http://localhost:5173/*"
+    ]
+  },
+  "content_scripts": [
+    {
+      "matches": ["http://*/*", "https://*/*"],
+      "js": ["content.js"]
+    }
+  ]
 }
