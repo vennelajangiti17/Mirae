@@ -6,6 +6,7 @@
   "description": "Smart scraper for the Mirae application tracking dashboard.",
   "permissions": [
     "activeTab",
+    "tabs",
     "scripting",
     "contextMenus",
     "storage"

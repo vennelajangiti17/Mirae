@@ -9,9 +9,15 @@ chrome.runtime.onInstalled.addListener(() => {
 
 chrome.contextMenus.onClicked.addListener((info, tab) => {
   if (info.menuItemId === "save-to-mirae") {
+    // Can't inject into chrome:// or edge:// pages
+    if (!tab.url || tab.url.startsWith("chrome://") || tab.url.startsWith("edge://")) {
+      console.warn("Mirae: Cannot save from browser internal pages.");
+      return;
+    }
     chrome.tabs.sendMessage(tab.id, { action: "triggerScrape" }, (response) => {
       if (chrome.runtime.lastError) {
-        console.error("Content script not found. Make sure you refreshed the job page.");
+        // Silently consume the error — this is expected on pages loaded before the extension
+        console.warn("Mirae: Content script not available on this tab. Try refreshing the page.");
       }
     });
   }
