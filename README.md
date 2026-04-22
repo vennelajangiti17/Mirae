@@ -219,84 +219,152 @@ Mirae/
 
 ---
 
-## 🚀 Getting Started
+## 🚀 Getting Started (For Teammates)
 
-### 1. Clone the Repository
+Follow these steps **exactly in order** after pulling the repo.
+
+### Step 1 — Clone the Repo
 
 ```bash
-git clone https://github.com/your-username/Mirae.git
+git clone https://github.com/vennelajangiti17/Mirae.git
 cd Mirae
 ```
 
-### 2. Backend Setup
+### Step 2 — Install Frontend Dependencies
+
+```bash
+npm install
+```
+
+### Step 3 — Install Backend Dependencies
 
 ```bash
 cd Mirae-Backend
 npm install
 ```
 
-Create a `.env` file in `Mirae-Backend/`:
+### Step 4 — Create Your `.env` File
+
+While still inside `Mirae-Backend/`, create a file called `.env` and paste this:
 
 ```env
 MONGO_URI=mongodb+srv://<username>:<password>@cluster.mongodb.net/mirae?retryWrites=true&w=majority
-JWT_SECRET=your_super_secret_jwt_key_here
-GEMINI_API_KEY=your_gemini_api_key_here
+JWT_SECRET=mirae_super_secret_key_2026
+GEMINI_API_KEY=<your_gemini_api_key>
 PORT=5000
 ```
 
-Start the backend:
+> **How to get each value:**
+> - `MONGO_URI` → Ask the team lead for the shared MongoDB Atlas connection string, or create your own free cluster at [mongodb.com/atlas](https://www.mongodb.com/atlas)
+> - `JWT_SECRET` → Any random string. All teammates can use the same one to share sessions.
+> - `GEMINI_API_KEY` → Get your own free key at [Google AI Studio](https://aistudio.google.com/app/apikey) (takes 30 seconds)
+
+### Step 5 — Start the Backend (Terminal 1)
 
 ```bash
+cd Mirae-Backend
 node server.js
 ```
 
-You should see:
+✅ You should see:
 ```
 🌟 Mirae Backend is listening on port 5000
 🔗 Health check available at http://localhost:5000/health
+✅ Successfully connected to MongoDB Database!
 ```
 
-### 3. Frontend Setup
+> ⚠️ If you see a MongoDB connection error, double-check your `MONGO_URI` in `.env`.
+> ⚠️ If you see a Gemini error, that's OK — jobs will still save, just without AI analysis.
 
-Open a **new terminal**:
+### Step 6 — Start the Frontend (Terminal 2)
+
+Open a **new/second terminal** (don't close the backend one):
 
 ```bash
 cd Mirae
-npm install
 npm run dev
 ```
 
-The frontend will start at `http://localhost:5173`.
+✅ You should see:
+```
+  VITE v6.x.x  ready in 500ms
 
-### 4. Chrome Extension Setup
+  ➜  Local:   http://localhost:5173/
+```
 
-1. Open Chrome → navigate to `chrome://extensions`
-2. Enable **Developer mode** (top-right toggle)
-3. Click **"Load unpacked"**
-4. Select the `Mirae-Extension` folder
-5. The Mirae icon will appear in your toolbar
+### Step 7 — Load the Chrome Extension
+
+1. Open **Google Chrome**
+2. Go to `chrome://extensions` in the address bar
+3. Turn on **Developer mode** (toggle in the top-right corner)
+4. Click **"Load unpacked"**
+5. Navigate to and select the `Mirae-Extension` folder inside the project
+6. You'll see "Mirae AI Tracker" appear — **pin it** to your toolbar for easy access
+
+### Step 8 — Create Your Account
+
+1. Open `http://localhost:5173` in Chrome
+2. Click **"Sign Up"**
+3. Enter your name, email, and password
+4. You'll land on the Dashboard — **your token is automatically synced to the extension**
+
+### Step 9 — (Optional) Upload Your Resume
+
+This enables AI Match Scoring on saved jobs:
+
+1. On the dashboard, look at the **bottom-left** of the sidebar — click your name
+2. Click **"Manage Resumes"**
+3. Click **"Upload Resume"** and select a `.txt` file containing your resume text
+4. You'll see "✨ Resume uploaded and AI Profile updated!"
 
 ---
 
 ## 📖 Usage Guide
 
-### First Time Setup
-1. Open `http://localhost:5173` and click **Sign Up**.
-2. Create your account — you'll be redirected to the dashboard.
-3. (Optional) Click your profile → **Manage Resumes** → upload your resume as a `.txt` file. This enables AI Match Scoring.
+### Saving a Job from Any Website
 
-### Saving Jobs
-1. Navigate to any job listing (LinkedIn, Google Careers, Indeed, etc.)
-2. Click the **Mirae extension icon** → **"✨ Save Job to Mirae"**
-3. Or **right-click** anywhere on the page → **"✨ Save to Mirae"**
-4. Wait for the AI analysis (2-5 seconds)
-5. Refresh your dashboard to see the new job card
+1. Go to **any job listing page** — LinkedIn, Amazon Jobs, Indeed, Google Careers, Glassdoor, etc.
+2. **Option A:** Click the **Mirae puzzle icon** in the Chrome toolbar → Click **"✨ Save Job to Mirae"**
+3. **Option B:** **Right-click** anywhere on the page → Click **"✨ Save to Mirae"**
+4. Wait 3-5 seconds for the AI to analyze the job
+5. You'll see a success alert like:
+   - With resume: `✨ Success! "Data Engineer" analyzed by AI and saved to Mirae with a Match Score of 78%!`
+   - Without resume: `✨ Success! "Data Engineer" analyzed by AI and saved to Mirae. Upload your resume on the dashboard to get a Match Score!`
+6. Go to `http://localhost:5173/dashboard` and **refresh** — your job card will appear under "Saved"
 
-### Managing Your Pipeline
-- **Click any job card** to view the detail drawer with matched/missing skills
-- Use the **Saved → Applied → Interviewing → Offer → Rejected** pipeline on the dashboard
-- Visit **Analytics** for insights into your search patterns
-- Check **Calendar** for upcoming deadlines and interviews
+### What the AI Does Automatically
+
+When you save a job, Gemini AI extracts:
+- 🏢 **Company name** (even if the scraper can't detect it from the page HTML)
+- 🛠️ **Required skills** (Python, SQL, AWS, React, etc.) — always extracted
+- 📍 **Location** and 💰 **Salary range** (if mentioned)
+- 📊 **Match Score** (0-100%) — only if you've uploaded a resume
+- ✅ **Matched skills** — skills you have that the job wants
+- ❌ **Missing skills** — skills you need to learn
+
+### Viewing Job Details
+
+1. Click any **job card** on the dashboard
+2. A detail drawer slides in from the right showing:
+   - AI Match Score circle
+   - Full job description
+   - Required skills (green tags = matched, red tags = missing)
+   - Quick links to the original listing
+
+### Dashboard Pages
+
+| Page | What it shows |
+|------|--------------|
+| **Dashboard** | Your Kanban pipeline — Saved → Applied → Interviewing → Offer → Rejected |
+| **Analytics** | Charts, funnel, top skills, avg match score, trends |
+| **Calendar** | Upcoming deadlines, interviews, follow-ups |
+| **Settings** | Profile info, theme toggle, resume management, social links |
+
+### Adding Jobs Manually
+
+1. Click **"+ Add Manual"** (top-right of dashboard)
+2. Fill in the job title, company, URL, skills, etc.
+3. Click **Save** — it appears on your dashboard immediately
 
 ---
 
