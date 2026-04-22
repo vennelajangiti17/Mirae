@@ -3,6 +3,7 @@ import { Link, useLocation } from 'react-router';
 import { useState } from 'react';
 import { AnimatePresence } from 'motion/react';
 import { ProfilePopover } from './ProfilePopover';
+import { BrandLogo } from './BrandLogo';
 
 interface SidebarProps {
   onManageResumesOpen: () => void;
@@ -28,9 +29,12 @@ export function Sidebar({
   return (
     <aside className="fixed left-0 top-0 h-screen w-60 bg-[#14213D] flex flex-col z-10 overflow-visible">
       <div className="p-6 border-b border-[rgba(252,163,17,0.2)]">
-        <h1 className="text-2xl tracking-tight" style={{ fontFamily: 'var(--font-display)' }}>
-          <span className="text-[#FCA311]">Mirae</span>
-        </h1>
+        <div className="flex items-center gap-3">
+          <BrandLogo className="h-12 w-12 flex-shrink-0" />
+          <h1 className="text-2xl tracking-tight" style={{ fontFamily: 'var(--font-display)' }}>
+            <span className="text-[#FCA311]">Mirae</span>
+          </h1>
+        </div>
         <div className="flex items-center gap-2 mt-2">
           <div className="w-2 h-2 rounded-full bg-[#FCA311] animate-pulse"></div>
           <span className="text-xs text-[#E5E5E5]">Connected</span>

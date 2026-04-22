@@ -1,6 +1,7 @@
 import { X } from 'lucide-react';
 import { motion } from 'motion/react';
 import { useState } from 'react';
+import { BrandLogo } from './BrandLogo';
 
 interface Props {
   onClose?: () => void;
@@ -28,6 +29,7 @@ export function ExtensionPopup({ onClose }: Props) {
         {/* Header */}
         <div className="bg-[#14213D] p-4 flex items-center justify-between">
           <div className="flex items-center gap-2">
+            <BrandLogo className="h-10 w-10 flex-shrink-0" />
             <h1 className="text-xl font-bold" style={{ fontFamily: 'var(--font-display)' }}>
               <span className="text-[#FCA311]">Mirae</span>
             </h1>
