@@ -1,6 +1,13 @@
 const mongoose = require('mongoose');
 
 const jobSchema = new mongoose.Schema({
+  // 🔐 NEW: Tie this job to a specific user account
+  userId: { 
+    type: mongoose.Schema.Types.ObjectId, 
+    ref: 'User', 
+    required: true 
+  },
+
   // 1. Core Scraped Data (From the Chrome Extension)
   title: { type: String, required: true },
   company: { type: String, required: true },
