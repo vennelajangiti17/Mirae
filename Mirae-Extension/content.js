@@ -1,6 +1,7 @@
 // content.js
 // This leaves a hidden "fingerprint" on any webpage the user visits
 document.documentElement.setAttribute('data-mirae-installed', 'true');
+
 const getTextBySelector = (selectors) => {
   for (let selector of selectors) {
     const element = document.querySelector(selector);
@@ -30,7 +31,8 @@ const scrapeAndSendToMirae = async () => {
   console.log("Mirae: Data extracted. Sending to AI backend...", jobData);
 
   try {
-    const response = await fetch('http://localhost:5000/api/jobs', {
+    // 🔥 UPDATED HERE: Now points to the new /api/tracker route!
+    const response = await fetch('http://localhost:5000/api/tracker', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
