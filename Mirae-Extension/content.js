@@ -1,6 +1,4 @@
 // content.js
-
-// 1. Helper function to safely grab text
 const getTextBySelector = (selectors) => {
   for (let selector of selectors) {
     const element = document.querySelector(selector);
@@ -11,32 +9,24 @@ const getTextBySelector = (selectors) => {
   return "Could not detect";
 };
 
-// 2. The main scraping logic
-const scrapeJobDetails = async () => {
-  console.log("Mirae Scraper: Starting extraction...");
-
-  const jobTitle = getTextBySelector([
-    'h1.top-card-layout__title', '.t-24.t-bold', 'h1', '.job-title'
-  ]);
-
-  const companyName = getTextBySelector([
-    '.topcard__org-name-link', '.job-details-jobs-unified-top-card__company-name', '[data-cy="company-name"]', '.company-name'
-  ]);
-
-  const jobDescription = getTextBySelector([
-    '.description__text', '.jobs-description__content', '#job-description', 'main', 'body'
-  ]);
+const scrapeAndSendToMirae = async () => {
+  console.log("Mirae: Extracting page data...");
 
   const jobData = {
-    title: jobTitle,
-    company: companyName,
+    title: getTextBySelector(['h1.top-card-layout__title', '.t-24.t-bold', 'h1', '.job-title']),
+    company: getTextBySelector(['.topcard__org-name-link', '.job-details-jobs-unified-top-card__company-name', '[data-cy="company-name"]', '.company-name']),
     url: window.location.href,
-    description: jobDescription.substring(0, 3000) 
+    description: getTextBySelector(['.description__text', '.jobs-description__content', '#job-description', 'main', 'body']).substring(0, 4000)
   };
 
-  console.log("Mirae Scraper: Extracted data, sending to server...", jobData);
+  // Prevent sending entirely empty data
+  if (jobData.title === "Could not detect" && jobData.description.length < 50) {
+    alert("❌ Mirae: Couldn't find enough job data on this page.");
+    return;
+  }
 
-  // 3. Send the data to your new Node.js backend
+  console.log("Mirae: Data extracted. Sending to AI backend...", jobData);
+
   try {
     const response = await fetch('http://localhost:5000/api/jobs', {
       method: 'POST',
@@ -49,19 +39,16 @@ const scrapeJobDetails = async () => {
     const result = await response.json();
 
     if (response.ok) {
-      // Show a success alert if the backend says "201 Created"
-      alert(`✅ Success! Added "${jobData.title}" at ${jobData.company} to your Mirae pipeline.`);
+      // Pulling the match score directly from the backend response!
+      alert(`✨ Success! "${jobData.title}" analyzed by AI and saved to Mirae with a Match Score of ${result.job.matchScore}%!`);
     } else {
-      // Show an error if the backend rejected it
-      console.error("Backend Error:", result);
-      alert(`❌ Failed to save job: ${result.error}`);
+      alert(`❌ Mirae Error: ${result.error}`);
     }
 
   } catch (error) {
-    console.error("Network Error:", error);
-    alert("❌ Could not connect to Mirae Server. Make sure your Node backend is running!");
+    console.error("Mirae Network Error:", error);
+    alert("❌ Could not connect to the Mirae Backend. Is your Node server running on port 5000?");
   }
 };
 
-// 4. Run the function immediately
-scrapeJobDetails();
+scrapeAndSendToMirae();
