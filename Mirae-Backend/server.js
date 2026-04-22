@@ -19,7 +19,7 @@ app.use(
     origin: [
       'http://localhost:3000', 
       'http://localhost:5173',
-      'chrome-extension://bdgphanpcmamocjgmijgbpdbhhjfbcbg' // 👈 Your Extension ID is allowed
+      'chrome-extension://bdgphanpcmamocjgmijgbpdbhhjfbcbg'
     ],
     credentials: true,
   })
