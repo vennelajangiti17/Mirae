@@ -3,16 +3,20 @@ import { Link, useLocation } from 'react-router';
 import { useState } from 'react';
 import { AnimatePresence } from 'motion/react';
 import { ProfilePopover } from './ProfilePopover';
-import { ManageResumesModal } from './ManageResumesModal';
-import { SocialPortfolioModal } from './SocialPortfolioModal';
-import { LogoutConfirmModal } from './LogoutConfirmModal';
 
-export function Sidebar() {
+interface SidebarProps {
+  onManageResumesOpen: () => void;
+  onSocialPortfolioOpen: () => void;
+  onLogoutOpen: () => void;
+}
+
+export function Sidebar({
+  onManageResumesOpen,
+  onSocialPortfolioOpen,
+  onLogoutOpen,
+}: SidebarProps) {
   const location = useLocation();
   const [showProfilePopover, setShowProfilePopover] = useState(false);
-  const [showManageResumes, setShowManageResumes] = useState(false);
-  const [showSocialPortfolio, setShowSocialPortfolio] = useState(false);
-  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 
   const navItems = [
     { name: 'Dashboard', path: '/', icon: LayoutDashboard },
@@ -78,42 +82,15 @@ export function Sidebar() {
             onClose={() => setShowProfilePopover(false)}
             onManageResumes={() => {
               setShowProfilePopover(false);
-              setShowManageResumes(true);
+              onManageResumesOpen();
             }}
             onSocialPortfolio={() => {
               setShowProfilePopover(false);
-              setShowSocialPortfolio(true);
+              onSocialPortfolioOpen();
             }}
             onLogout={() => {
               setShowProfilePopover(false);
-              setShowLogoutConfirm(true);
-            }}
-          />
-        )}
-      </AnimatePresence>
-
-      {/* Manage Resumes Modal */}
-      <AnimatePresence>
-        {showManageResumes && (
-          <ManageResumesModal onClose={() => setShowManageResumes(false)} />
-        )}
-      </AnimatePresence>
-
-      {/* Social & Portfolio Modal */}
-      <AnimatePresence>
-        {showSocialPortfolio && (
-          <SocialPortfolioModal onClose={() => setShowSocialPortfolio(false)} />
-        )}
-      </AnimatePresence>
-
-      {/* Logout Confirm Modal */}
-      <AnimatePresence>
-        {showLogoutConfirm && (
-          <LogoutConfirmModal
-            onClose={() => setShowLogoutConfirm(false)}
-            onConfirm={() => {
-              setShowLogoutConfirm(false);
-              console.log('User logged out');
+              onLogoutOpen();
             }}
           />
         )}
