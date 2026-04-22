@@ -1,5 +1,5 @@
 // content.js
-// This leaves a hidden "fingerprint" on any webpage the user visits
+// Leaves a hidden "fingerprint" on any webpage the user visits
 document.documentElement.setAttribute('data-mirae-installed', 'true');
 
 const getTextBySelector = (selectors) => {
@@ -12,7 +12,7 @@ const getTextBySelector = (selectors) => {
   return "Could not detect";
 };
 
-const scrapeAndSendToMirae = async () => {
+const scrapeAndSendToMirae = () => {
   console.log("Mirae: Extracting page data...");
 
   const jobData = {
@@ -22,37 +22,32 @@ const scrapeAndSendToMirae = async () => {
     description: getTextBySelector(['.description__text', '.jobs-description__content', '#job-description', 'main', 'body']).substring(0, 4000)
   };
 
-  // Prevent sending entirely empty data
   if (jobData.title === "Could not detect" && jobData.description.length < 50) {
     alert("❌ Mirae: Couldn't find enough job data on this page.");
     return;
   }
 
-  console.log("Mirae: Data extracted. Sending to AI backend...", jobData);
+  console.log("Mirae: Data extracted. Sending to background script...", jobData);
 
-  try {
-    // 🔥 UPDATED HERE: Now points to the new /api/tracker route!
-    const response = await fetch('http://localhost:5000/api/tracker', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(jobData),
-    });
+  // 🔄 THE RELAY: Send data to the background script instead of fetching directly!
+  chrome.runtime.sendMessage(
+    { action: "saveJob", data: jobData },
+    (response) => {
+      // Catch if the extension crashed or disconnected
+      if (chrome.runtime.lastError) {
+        alert("❌ Mirae Error: Extension disconnected. Please refresh the page and try again.");
+        return;
+      }
 
-    const result = await response.json();
-
-    if (response.ok) {
-      // Pulling the match score directly from the backend response!
-      alert(`✨ Success! "${jobData.title}" analyzed by AI and saved to Mirae with a Match Score of ${result.job.matchScore}%!`);
-    } else {
-      alert(`❌ Mirae Error: ${result.error}`);
+      // Handle the response from the background script
+      if (response && response.success) {
+        alert(`✨ Success! "${jobData.title}" analyzed by AI and saved to Mirae with a Match Score of ${response.data.job.matchScore}%!`);
+      } else {
+        alert(`❌ Mirae Error: ${response ? response.error : 'Unknown error occurred.'}`);
+      }
     }
-
-  } catch (error) {
-    console.error("Mirae Network Error:", error);
-    alert("❌ Could not connect to the Mirae Backend. Is your Node server running on port 5000?");
-  }
+  );
 };
 
+// Execute the scraping function
 scrapeAndSendToMirae();
