@@ -20,4 +20,11 @@ router.get('/', protect, profileController.getProfile);
  */
 router.put('/resume', protect, profileController.updateResume);
 
+/**
+ * @route   PUT /api/profile/social-links
+ * @desc    Update/Save user's social portfolio links
+ * @access  Private
+ */
+router.put('/social-links', protect, profileController.updateSocialLinks);
+
 module.exports = router;

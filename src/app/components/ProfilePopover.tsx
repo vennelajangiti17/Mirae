@@ -2,6 +2,7 @@ import { FileText, Link2, Moon, HelpCircle, LogOut, Camera } from 'lucide-react'
 import { motion, AnimatePresence } from 'motion/react';
 import { useState } from 'react';
 import { createPortal } from 'react-dom';
+import { useTheme } from '../hooks/useTheme';
 
 interface Props {
   onClose: () => void;
@@ -11,8 +12,9 @@ interface Props {
 }
 
 export function ProfilePopover({ onClose, onManageResumes, onSocialPortfolio, onLogout }: Props) {
-  const [isDarkMode, setIsDarkMode] = useState(false);
   const [isHoveringAvatar, setIsHoveringAvatar] = useState(false);
+  const { theme, toggleTheme } = useTheme();
+  const isDarkMode = theme === 'dark';
 
   const menuItems = [
     { icon: FileText, label: 'Manage Resumes', onClick: onManageResumes },
@@ -98,7 +100,7 @@ export function ProfilePopover({ onClose, onManageResumes, onSocialPortfolio, on
                   <div
                     onClick={(e) => {
                       e.stopPropagation();
-                      setIsDarkMode(!isDarkMode);
+                      toggleTheme();
                     }}
                     className={`w-10 h-5 rounded-full transition-all cursor-pointer ${
                       isDarkMode ? 'bg-[#FCA311]' : 'bg-[#E5E5E5]'

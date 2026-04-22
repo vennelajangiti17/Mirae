@@ -71,5 +71,18 @@ export const authService = {
     const data = await response.json();
     if (!response.ok) throw new Error(data.error || 'Failed to update resume');
     return data;
+  },
+
+  // 3. Save the social links array
+  async updateSocialLinks(socialLinks: any[]) {
+    const response = await fetch(`${PROFILE_URL}/social-links`, {
+      method: 'PUT',
+      headers: getAuthHeaders(),
+      body: JSON.stringify({ socialLinks }),
+    });
+
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.error || 'Failed to update social links');
+    return data;
   }
 };

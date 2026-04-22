@@ -13,8 +13,10 @@ import { LogoutConfirmModal } from './components/LogoutConfirmModal';
 import { LandingPage } from './components/LandingPage';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { useNavigate } from 'react-router';
+import { useTheme } from './hooks/useTheme';
 
 function AppContent() {
+  useTheme();
   const location = useLocation();
   const navigate = useNavigate();
   const [showExtension, setShowExtension] = useState(false);
