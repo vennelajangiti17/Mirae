@@ -17,7 +17,14 @@ const userSchema = new mongoose.Schema({
     type: String,
     required: true,
   },
+  // 📄 NEW: This stores the text extracted from the user's resume
+  // The AI will pull from here instead of using hardcoded details!
+  resumeText: {
+    type: String,
+    default: "",
+  }
 }, {
+  // Automatically manages 'createdAt' and 'updatedAt' fields
   timestamps: true,
 });
 
