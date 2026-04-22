@@ -39,3 +39,28 @@ exports.updateResume = async (req, res) => {
     res.status(500).json({ error: "Internal Server Error" });
   }
 };
+
+// Save or update the user's social links array
+exports.updateSocialLinks = async (req, res) => {
+  try {
+    const { socialLinks } = req.body;
+
+    if (!Array.isArray(socialLinks)) {
+      return res.status(400).json({ error: "Social links must be an array" });
+    }
+
+    const updatedUser = await User.findByIdAndUpdate(
+      req.user.id,
+      { socialLinks },
+      { new: true }
+    ).select('-password');
+
+    res.status(200).json({ 
+      message: "✅ Social portfolio updated successfully!", 
+      user: updatedUser 
+    });
+  } catch (error) {
+    console.error("Social Links Update Error:", error);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+};

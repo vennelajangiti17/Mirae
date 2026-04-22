@@ -22,7 +22,14 @@ const userSchema = new mongoose.Schema({
   resumeText: {
     type: String,
     default: "",
-  }
+  },
+  socialLinks: [{
+    id: String,
+    platform: String,
+    title: String,
+    url: String,
+    icon: String,
+  }]
 }, {
   // Automatically manages 'createdAt' and 'updatedAt' fields
   timestamps: true,

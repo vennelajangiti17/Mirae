@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import * as Switch from '@radix-ui/react-switch';
 import * as RadioGroup from '@radix-ui/react-radio-group';
 import * as ToggleGroup from '@radix-ui/react-toggle-group';
+import { useTheme } from '../hooks/useTheme';
 import {
   User,
   Bell,
@@ -110,9 +111,9 @@ export function Settings() {
   const [selectedTags] = useState(['Remote', 'Internship', 'Urgent']);
 
   // Appearance Settings
-  const [theme, setTheme] = useState('light');
   const [accentColor, setAccentColor] = useState('gold');
   const [cardLayout, setCardLayout] = useState('comfortable');
+  const { theme, setTheme } = useTheme();
 
   // Extension Settings
   const [jobPageDetection, setJobPageDetection] = useState(true);
@@ -377,7 +378,11 @@ export function Settings() {
               <ToggleGroup.Root
                 type="single"
                 value={theme}
-                onValueChange={(value) => value && setTheme(value)}
+                onValueChange={(value) => {
+                  if (value === 'light' || value === 'dark') {
+                    setTheme(value);
+                  }
+                }}
                 className="inline-flex bg-gray-100 rounded-lg p-1 w-full"
               >
                 <ToggleGroup.Item

@@ -3,6 +3,8 @@ import { motion, AnimatePresence } from 'motion/react';
 import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 
+import { authService } from '../services/authService';
+
 interface Props {
   onClose: () => void;
 }
@@ -26,35 +28,14 @@ const platformIcons = {
 };
 
 export function SocialPortfolioModal({ onClose }: Props) {
-  const [links, setLinks] = useState<SocialLink[]>([
-    {
-      id: '1',
-      platform: 'LinkedIn',
-      title: 'Professional Profile',
-      url: 'https://linkedin.com/in/alexchen',
-      icon: 'linkedin',
-    },
-    {
-      id: '2',
-      platform: 'GitHub',
-      title: 'Code Portfolio',
-      url: 'https://github.com/alexchen',
-      icon: 'github',
-    },
-    {
-      id: '3',
-      platform: 'Personal Website',
-      title: 'Portfolio Site',
-      url: 'https://alexchen.dev',
-      icon: 'website',
-    },
-  ]);
+  const [links, setLinks] = useState<SocialLink[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
   const [showAddForm, setShowAddForm] = useState(false);
   const [newPlatform, setNewPlatform] = useState('');
   const [newUrl, setNewUrl] = useState('');
 
-  const handleAddLink = () => {
+  const handleAddLink = async () => {
     if (newPlatform && newUrl) {
       const newLink: SocialLink = {
         id: Date.now().toString(),
@@ -63,20 +44,48 @@ export function SocialPortfolioModal({ onClose }: Props) {
         url: newUrl,
         icon: 'website',
       };
-      setLinks([...links, newLink]);
+      
+      const updatedLinks = [...links, newLink];
+      setLinks(updatedLinks);
       setNewPlatform('');
       setNewUrl('');
       setShowAddForm(false);
+      
+      try {
+        await authService.updateSocialLinks(updatedLinks);
+      } catch (error) {
+        console.error("Failed to save link", error);
+      }
     }
   };
 
-  const handleDeleteLink = (id: string) => {
-    setLinks(links.filter(link => link.id !== id));
+  const handleDeleteLink = async (id: string) => {
+    const updatedLinks = links.filter(link => link.id !== id);
+    setLinks(updatedLinks);
+    try {
+      await authService.updateSocialLinks(updatedLinks);
+    } catch (error) {
+      console.error("Failed to delete link", error);
+    }
   };
 
   useEffect(() => {
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
+
+    const loadProfileLinks = async () => {
+      try {
+        const profile = await authService.getProfile();
+        if (profile.socialLinks) {
+          setLinks(profile.socialLinks);
+        }
+      } catch (error) {
+        console.error("Failed to load links", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    loadProfileLinks();
 
     return () => {
       document.body.style.overflow = previousOverflow;
@@ -128,6 +137,12 @@ export function SocialPortfolioModal({ onClose }: Props) {
 
           {/* Content */}
           <div className="p-6 overflow-y-auto flex-1">
+            {isLoading ? (
+              <div className="flex justify-center p-8">
+                <div className="w-8 h-8 rounded-full border-4 border-[#E5E5E5] border-t-[#FCA311] animate-spin"></div>
+              </div>
+            ) : (
+              <>
             {/* Links List */}
             <div className="space-y-3 mb-6">
               {links.map((link, index) => {
@@ -275,6 +290,8 @@ export function SocialPortfolioModal({ onClose }: Props) {
                 </motion.div>
               )}
             </AnimatePresence>
+            </>
+            )}
           </div>
         </motion.div>
       </div>

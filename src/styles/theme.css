@@ -54,40 +54,54 @@
 }
 
 .dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.145 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.145 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.985 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.396 0.141 25.723);
-  --destructive-foreground: oklch(0.637 0.237 25.331);
-  --border: oklch(0.269 0 0);
-  --input: oklch(0.269 0 0);
-  --ring: oklch(0.439 0 0);
+  /* Midnight Pro Canvas */
+  --background: #222B3D; 
+  --foreground: #F0F6FC; /* Off-White */
+  
+  /* Midnight Pro Containers */
+  --card: #182333; /* Complementary Dark Ash for Cards */
+  --card-foreground: #F0F6FC;
+  --popover: #182333;
+  --popover-foreground: #F0F6FC;
+  
+  --border: #32435C; /* Ash Border */
+  
+  /* Primary & Accents */
+  --primary: #F59E0B; /* Orange */
+  --primary-foreground: #0B0E14;
+  
+  --secondary: #161B22; 
+  --secondary-foreground: #F0F6FC;
+  --muted: #161B22;
+  --muted-foreground: #8B949E; /* Muted Silver */
+  --accent: #FFB347; /* Glowing Amber */
+  --accent-foreground: #0B0E14;
+  
+  --destructive: #EF4444;
+  --destructive-foreground: #F0F6FC;
+  --input: rgba(255, 255, 255, 0.05);
+  --input-background: #161B22;
+  --switch-background: #30363D;
+  --ring: rgba(255, 179, 71, 0.5);
+  
+  --chart-1: #FFB347;
+  --chart-2: #3B82F6;
+  --chart-3: #10B981;
+  --chart-4: #8B5CF6;
+  --chart-5: #EC4899;
+  
+  /* Sidebar */
+  --sidebar: #0B1324; /* Dark Navy Blue */
+  --sidebar-foreground: #8B949E;
+  --sidebar-primary: #FFB347; /* Glowing Amber */
+  --sidebar-primary-foreground: #0B0E14;
+  --sidebar-accent: #1E2D53; 
+  --sidebar-accent-foreground: #F0F6FC;
+  --sidebar-border: #30363D;
+  --sidebar-ring: #FFB347;
+  
   --font-weight-medium: 500;
   --font-weight-normal: 400;
-  --chart-1: oklch(0.488 0.243 264.376);
-  --chart-2: oklch(0.696 0.17 162.48);
-  --chart-3: oklch(0.769 0.188 70.08);
-  --chart-4: oklch(0.627 0.265 303.9);
-  --chart-5: oklch(0.645 0.246 16.439);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(0.269 0 0);
-  --sidebar-ring: oklch(0.439 0 0);
 }
 
 @theme inline {
@@ -194,5 +208,100 @@
     font-size: var(--text-base);
     font-weight: var(--font-weight-normal);
     line-height: 1.5;
+  }
+}
+
+@layer utilities {
+  /* Dashboard Canvas Background */
+  .dark [class~="bg-[#E5E5E5]"] {
+    background-color: var(--background) !important;
+  }
+  
+  /* Sidebar Background */
+  .dark [class~="bg-[#14213D]"] {
+    background-color: var(--sidebar) !important;
+  }
+
+  /* Cards and Containers */
+  .dark [class~="bg-white"],
+  .dark [class~="bg-[#FFFFFF]"],
+  .dark [class~="bg-gray-50"],
+  .dark [class~="bg-gray-100"] {
+    background-color: var(--card) !important;
+  }
+
+  .dark [class~="text-[#000000]"],
+  .dark [class~="text-[#14213D]"],
+  .dark [class~="text-black"] {
+    color: var(--foreground) !important;
+  }
+
+  .dark [class~="text-[#73766A]"],
+  .dark [class~="text-[#6b7280]"],
+  .dark [class~="text-[#9ca3af]"],
+  .dark [class~="text-[#14213D]/50"],
+  .dark [class~="text-[#14213D]/60"],
+  .dark [class~="text-[#14213D]/70"] {
+    color: var(--muted-foreground) !important;
+  }
+
+  .dark [class~="border-[#E5E5E5]"],
+  .dark [class~="border-gray-100"],
+  .dark [class~="border-gray-200"],
+  .dark [class~="border-gray-300"] {
+    border-color: var(--border) !important;
+  }
+
+  .dark [class~="hover:bg-[#E5E5E5]"]:hover,
+  .dark [class~="hover:bg-gray-50"]:hover {
+    background-color: color-mix(in oklab, var(--muted) 80%, transparent) !important;
+  }
+
+  .dark [class~="bg-[#E0F2FE]"],
+  .dark [class~="bg-[#DBEAFE]"],
+  .dark [class~="bg-[#DDF7EA]"],
+  .dark [class~="bg-[#FEF3C7]"],
+  .dark [class~="bg-[#FDE2E2]"],
+  .dark [class~="bg-[#f9fafb]"] {
+    background-color: color-mix(in oklab, var(--muted) 70%, transparent) !important;
+  }
+
+  /* Midnight Pro: Replace Drop Shadows with Inner Glows/Strokes */
+  .dark [class~="shadow-sm"],
+  .dark [class~="shadow-md"],
+  .dark [class~="shadow-lg"],
+  .dark [class*="shadow-["] {
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03), 0 0 0 1px var(--border) !important;
+  }
+  
+  /* Midnight Pro: Special Hover shadow for cards */
+  .dark [class*="hover:shadow-["]:hover {
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06), 0 0 0 1px var(--primary), 0 0 15px rgba(245, 158, 11, 0.15) !important;
+  }
+
+  /* Midnight Pro: Glowing Amber Active States */
+  .dark [class~="text-[#FCA311]"] {
+    color: var(--sidebar-primary) !important;
+    text-shadow: 0 0 12px rgba(255, 179, 71, 0.5);
+  }
+  .dark [class~="border-[#FCA311]"] {
+    border-color: var(--sidebar-primary) !important;
+    box-shadow: -2px 0 12px rgba(255, 179, 71, 0.4) !important;
+  }
+  
+  /* Midnight Pro: Primary Orange Glow CTA */
+  .dark [class~="bg-[#FCA311]"] {
+    background-color: var(--primary) !important;
+    box-shadow: 0 0 18px rgba(245, 158, 11, 0.35) !important;
+    border: 1px solid rgba(245, 158, 11, 0.5) !important;
+  }
+
+  /* Midnight Pro: Desaturated Images */
+  .dark img {
+    filter: brightness(0.85) saturate(0.85) !important;
+    transition: filter 0.3s ease;
+  }
+  .dark img:hover {
+    filter: brightness(0.95) saturate(0.95) !important;
   }
 }
