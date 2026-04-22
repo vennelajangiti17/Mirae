@@ -3,11 +3,12 @@ const { GoogleGenerativeAI } = require("@google/generative-ai");
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
-// Logic to handle the AI analysis
+// Logic to handle the AI analysis and saving
 exports.createJob = async (req, res) => {
   try {
     const incomingData = req.body;
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+    // Upgraded to the faster 2.5-flash model
+    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
     const prompt = `
       Analyze this job description and my resume. 
@@ -24,7 +25,14 @@ exports.createJob = async (req, res) => {
     let aiText = result.response.text().replace(/```json/g, '').replace(/```/g, '').trim();
     const aiAnalysis = JSON.parse(aiText);
 
-    const finalData = { ...incomingData, ...aiAnalysis, status: 'Saved' };
+    // 🔐 SECURE ATTACHMENT: Merge the raw data, AI data, and the specific User's ID
+    const finalData = { 
+      ...incomingData, 
+      ...aiAnalysis, 
+      status: 'Saved',
+      userId: req.user.id // This comes from your authMiddleware!
+    };
+
     const newJob = new Job(finalData);
     await newJob.save();
 
@@ -38,9 +46,11 @@ exports.createJob = async (req, res) => {
 // Logic to get all jobs (for your dashboard)
 exports.getAllJobs = async (req, res) => {
   try {
-    const jobs = await Job.find().sort({ createdAt: -1 });
+    // 🔐 SECURE FETCH: Only pull jobs that belong to the person asking
+    const jobs = await Job.find({ userId: req.user.id }).sort({ createdAt: -1 });
     res.status(200).json(jobs);
   } catch (error) {
+    console.error("Fetch Error:", error);
     res.status(500).json({ error: "Failed to fetch jobs" });
   }
 };
