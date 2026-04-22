@@ -1,6 +1,7 @@
 import { FileText, Link2, Moon, HelpCircle, LogOut, Camera } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useState } from 'react';
+import { createPortal } from 'react-dom';
 
 interface Props {
   onClose: () => void;
@@ -20,11 +21,11 @@ export function ProfilePopover({ onClose, onManageResumes, onSocialPortfolio, on
     { icon: HelpCircle, label: 'Help & Community', onClick: () => {} },
   ];
 
-  return (
+  return createPortal(
     <>
       {/* Backdrop */}
       <div
-        className="fixed inset-0 z-[9998]"
+        className="fixed inset-0 z-[2147483645]"
         onClick={onClose}
       />
 
@@ -34,8 +35,8 @@ export function ProfilePopover({ onClose, onManageResumes, onSocialPortfolio, on
         animate={{ opacity: 1, y: 0, scale: 1 }}
         exit={{ opacity: 0, y: 10, scale: 0.95 }}
         transition={{ duration: 0.2 }}
-        className="fixed left-64 bottom-24 z-[9999] w-[280px] bg-white rounded-md shadow-[0_8px_16px_rgba(0,0,0,0.15)]"
-        style={{ position: 'fixed' }}
+        className="absolute left-64 bottom-24 z-[2147483646] w-[280px] rounded-md border border-[#E5E5E5] bg-[#FFFFFF] shadow-[0_10px_20px_rgba(0,0,0,0.15)]"
+        style={{ position: 'absolute' }}
       >
         {/* Header Section */}
         <div className="p-4 border-b border-[#E5E5E5]">
@@ -127,6 +128,7 @@ export function ProfilePopover({ onClose, onManageResumes, onSocialPortfolio, on
           </button>
         </div>
       </motion.div>
-    </>
+    </>,
+    document.body,
   );
 }
