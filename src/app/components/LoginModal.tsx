@@ -6,7 +6,6 @@ import { X } from 'lucide-react';
 import { useNavigate } from 'react-router';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
-// 1. Import your new auth service
 import { authService } from '../services/authService'; 
 
 interface LoginModalProps {
@@ -19,7 +18,6 @@ export function LoginModal({ onClose }: LoginModalProps) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
-  // 2. Add loading state
   const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
@@ -36,7 +34,6 @@ export function LoginModal({ onClose }: LoginModalProps) {
     };
   }, [onClose]);
 
-  // 3. Make the submit handler ASYNC
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setError('');
@@ -49,13 +46,27 @@ export function LoginModal({ onClose }: LoginModalProps) {
     try {
       setIsLoading(true);
       
-      // 4. Call the real backend
       const data = await authService.login(email, password);
       
-      // 🔐 SAVE THE TOKEN (The VIP Wristband)
+      // 🔐 SAVE THE TOKEN & USER NAME
       localStorage.setItem('token', data.token);
-      localStorage.setItem('isLoggedIn', 'true'); // Keep your friend's flag for UI logic
+      localStorage.setItem('userName', data.user.name); // Fixes the hardcoded sidebar name!
+      localStorage.setItem('isLoggedIn', 'true'); 
       
+      // 🔄 SYNC WITH EXTENSION
+      const EXTENSION_ID = "bdgphanpcmamocjgmijgbpdbhhjfbcbg"; 
+      if (window.chrome && window.chrome.runtime) {
+        try {
+          window.chrome.runtime.sendMessage(
+            EXTENSION_ID, 
+            { message: "syncToken", token: data.token },
+            (response) => console.log("Extension synced:", response)
+          );
+        } catch (e) {
+          console.log("Extension not installed or not ready.");
+        }
+      }
+
       onClose();
       navigate('/dashboard', { replace: true });
     } catch (err: any) {
