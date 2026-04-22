@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="https://ui-avatars.com/api/?name=Mirae&background=FCA311&color=14213D&size=128&bold=true&font-size=0.5" alt="Mirae Logo" width="80" />
+  <img src="mirae-logo.svg" alt="Mirae Logo" width="120" />
 </p>
 
 <h1 align="center">Mirae — AI-Powered Career Command Center</h1>
@@ -26,11 +26,7 @@
 - [Tech Stack](#-tech-stack)
 - [Project Structure](#-project-structure)
 - [Prerequisites](#-prerequisites)
-- [Getting Started](#-getting-started)
-  - [1. Clone the Repository](#1-clone-the-repository)
-  - [2. Backend Setup](#2-backend-setup)
-  - [3. Frontend Setup](#3-frontend-setup)
-  - [4. Chrome Extension Setup](#4-chrome-extension-setup)
+- [Getting Started (For Teammates)](#-getting-started-for-teammates)
 - [Usage Guide](#-usage-guide)
 - [API Endpoints](#-api-endpoints)
 - [Environment Variables](#-environment-variables)
@@ -54,40 +50,35 @@ Instead of manually bookmarking job listings or maintaining messy spreadsheets, 
 
 ## 🏗 Architecture
 
-```
-┌──────────────────┐     ┌──────────────────┐     ┌──────────────────┐
-│  Chrome Extension │────▶│  Node.js Backend  │────▶│   MongoDB Atlas   │
-│   (Content Script │     │  (Express + Auth) │     │   (Jobs, Users)   │
-│    + Background)  │     │                   │     │                   │
-└──────────────────┘     └────────┬──────────┘     └──────────────────┘
-                                  │
-                                  ▼
-                         ┌──────────────────┐
-                         │   Gemini 2.5 AI   │
-                         │  (Match Scoring,  │
-                         │   Skill Parsing)  │
-                         └──────────────────┘
-                                  │
-                                  ▼
-┌──────────────────────────────────────────────────────────────────────┐
-│                     React Dashboard (Vite)                          │
-│  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────────────┐    │
-│  │Dashboard │  │Analytics │  │ Calendar │  │    Settings      │    │
-│  │  (Kanban │  │ (Funnel, │  │(Deadlines│  │(Profile, Resume, │    │
-│  │  Cards)  │  │  Charts) │  │ Agenda)  │  │  Social Links)  │    │
-│  └──────────┘  └──────────┘  └──────────┘  └──────────────────┘    │
-└──────────────────────────────────────────────────────────────────────┘
+```mermaid
+graph TD
+    subgraph "Client Side"
+        E[Chrome Extension<br/>Scrapes job pages]
+        D[React Dashboard<br/>Vite + Tailwind]
+    end
+
+    subgraph "Server Side"
+        B[Node.js Backend<br/>Express API]
+    end
+
+    subgraph "External Services"
+        DB[(MongoDB Atlas<br/>Database)]
+        AI[Google Gemini 2.5<br/>AI Engine]
+    end
+
+    E -- "1. POST raw job data" --> B
+    D -- "5. GET/PUT user data" --> B
+    B <-->| "2. Read/Write data" | DB
+    B <-->| "3. Prompt analysis" | AI
 ```
 
-### Data Flow
+### 🔄 End-to-End Data Flow
 
-1. **User clicks "Save to Mirae"** on a job listing page via the extension popup or right-click menu.
-2. `content.js` scrapes the page (title, company, URL, description) and sends data to `background.js`.
-3. `background.js` attaches the user's auth token and POSTs to `POST /api/tracker`.
-4. The backend fetches the user's resume from MongoDB, sends both the job description and resume to **Gemini 2.5 Flash**.
-5. Gemini returns structured JSON: `matchScore`, `matchedSkills`, `missingSkills`, `location`, `salaryRange`, `category`, `deadline`.
-6. The enriched job document is saved to MongoDB and returned to the extension.
-7. The React dashboard fetches and displays all jobs via authenticated API calls.
+1. **Capture:** The user clicks "Save to Mirae" via the Chrome Extension on any job portal. The `content.js` script scrapes the page and `background.js` sends the raw text to the backend.
+2. **Retrieve Context:** The Node.js backend receives the request and securely fetches the user's uploaded resume from **MongoDB Atlas**.
+3. **AI Analysis:** The backend sends the job description and the resume to **Gemini 2.5 Flash**. Gemini acts as the "analytical brain", calculating the match score and extracting required skills, missing skills, location, and salary.
+4. **Storage:** The backend merges the AI insights with the scraped data, attaches the user's ID to ensure strict data isolation, and saves the final enriched document to MongoDB.
+5. **Display:** The user opens the **React Dashboard**, which securely fetches the saved jobs and analytics via the backend REST API, displaying them in a beautiful Kanban view.
 
 ---
 
@@ -321,12 +312,6 @@ This enables AI Match Scoring on saved jobs:
 
 ## 📖 Usage Guide
 
-### Saving a Job from Any Website
-
-1. Go to **any job listing page** — LinkedIn, Amazon Jobs, Indeed, Google Careers, Glassdoor, etc.
-2. **Option A:** Click the **Mirae puzzle icon** in the Chrome toolbar → Click **"✨ Save Job to Mirae"**
-3. **Option B:** **Right-click** anywhere on the page → Click **"✨ Save to Mirae"**
-4. Wait 3-5 seconds for the AI to analyze the job
 5. You'll see a success alert like:
    - With resume: `✨ Success! "Data Engineer" analyzed by AI and saved to Mirae with a Match Score of 78%!`
    - Without resume: `✨ Success! "Data Engineer" analyzed by AI and saved to Mirae. Upload your resume on the dashboard to get a Match Score!`
