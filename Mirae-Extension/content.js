@@ -1,6 +1,6 @@
 // content.js
 
-// 1. A helper function to safely grab text from the DOM without crashing if it doesn't exist
+// 1. Helper function to safely grab text
 const getTextBySelector = (selectors) => {
   for (let selector of selectors) {
     const element = document.querySelector(selector);
@@ -12,50 +12,56 @@ const getTextBySelector = (selectors) => {
 };
 
 // 2. The main scraping logic
-const scrapeJobDetails = () => {
+const scrapeJobDetails = async () => {
   console.log("Mirae Scraper: Starting extraction...");
 
-  // Try common selectors for Job Titles (usually the biggest heading on the page)
   const jobTitle = getTextBySelector([
-    'h1.top-card-layout__title', // LinkedIn logged out
-    '.t-24.t-bold',              // LinkedIn logged in
-    'h1',                        // Generic fallback: The main heading
-    '.job-title'                 // Common generic class
+    'h1.top-card-layout__title', '.t-24.t-bold', 'h1', '.job-title'
   ]);
 
-  // Try common selectors for Company Names
   const companyName = getTextBySelector([
-    '.topcard__org-name-link',   // LinkedIn logged out
-    '.job-details-jobs-unified-top-card__company-name', // LinkedIn logged in
-    '[data-cy="company-name"]',  // Common data attribute
-    '.company-name'              // Common generic class
+    '.topcard__org-name-link', '.job-details-jobs-unified-top-card__company-name', '[data-cy="company-name"]', '.company-name'
   ]);
 
-  // Grab the job description (we grab a large chunk of text to send to the AI later)
-  // We look for common main-content wrappers to avoid scraping the website's footer/nav bar
   const jobDescription = getTextBySelector([
-    '.description__text',        // LinkedIn
-    '.jobs-description__content',// LinkedIn logged in
-    '#job-description',          // Generic ID
-    'main',                      // HTML5 main content tag
-    'body'                       // Absolute fallback: grab everything
+    '.description__text', '.jobs-description__content', '#job-description', 'main', 'body'
   ]);
 
-  // Bundle it all up!
   const jobData = {
     title: jobTitle,
     company: companyName,
     url: window.location.href,
-    description: jobDescription.substring(0, 3000) // Limit to 3000 chars so we don't overload the backend
+    description: jobDescription.substring(0, 3000) 
   };
 
-  console.log("Mirae Scraper: Successfully extracted data!", jobData);
+  console.log("Mirae Scraper: Extracted data, sending to server...", jobData);
 
-  // 3. Send this data back to background.js or show an alert for now
-  alert(`🌟 Mirae Scraper Success! \n\nRole: ${jobData.title}\nCompany: ${jobData.company}\n\nCheck the console to see the full scraped data!`);
+  // 3. Send the data to your new Node.js backend
+  try {
+    const response = await fetch('http://localhost:5000/api/jobs', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(jobData),
+    });
 
-  return jobData;
+    const result = await response.json();
+
+    if (response.ok) {
+      // Show a success alert if the backend says "201 Created"
+      alert(`✅ Success! Added "${jobData.title}" at ${jobData.company} to your Mirae pipeline.`);
+    } else {
+      // Show an error if the backend rejected it
+      console.error("Backend Error:", result);
+      alert(`❌ Failed to save job: ${result.error}`);
+    }
+
+  } catch (error) {
+    console.error("Network Error:", error);
+    alert("❌ Could not connect to Mirae Server. Make sure your Node backend is running!");
+  }
 };
 
-// 4. Run the function immediately when the script is injected
+// 4. Run the function immediately
 scrapeJobDetails();
