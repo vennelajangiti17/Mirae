@@ -107,9 +107,21 @@ exports.createJob = async (req, res) => {
     }
 
     // 6. Use AI-extracted company/title as fallback when scraper fails
-    const finalCompany = (incomingData.company && incomingData.company !== 'Could not detect') 
-      ? incomingData.company 
-      : (aiAnalysis.companyName || 'Unknown Company');
+    let finalCompany = incomingData.company;
+    if (!finalCompany || finalCompany === 'Could not detect') {
+      if (aiAnalysis.companyName) {
+        finalCompany = aiAnalysis.companyName;
+      } else {
+        // Ultimate fallback: extract from URL if AI also failed (e.g. due to 503 error)
+        try {
+          const urlObj = new URL(incomingData.url);
+          const hostnameParts = urlObj.hostname.replace('www.', '').split('.');
+          finalCompany = hostnameParts[0].charAt(0).toUpperCase() + hostnameParts[0].slice(1);
+        } catch (e) {
+          finalCompany = 'Unknown Company';
+        }
+      }
+    }
 
     const finalTitle = (incomingData.title && incomingData.title !== 'Could not detect')
       ? incomingData.title
