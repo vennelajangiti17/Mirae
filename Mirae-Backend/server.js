@@ -13,16 +13,23 @@ const analyticsRoutes = require('./routes/analyticsRoutes');
 
 const app = express();
 
+// 🛡️ CORS Policy configured for Frontend + Extension
 app.use(
   cors({
-    origin: ['http://localhost:3000', 'http://localhost:5173'],
+    origin: [
+      'http://localhost:3000', 
+      'http://localhost:5173',
+      'chrome-extension://bdgphanpcmamocjgmijgbpdbhhjfbcbg' // 👈 Your Extension ID is allowed
+    ],
     credentials: true,
   })
 );
 app.use(express.json());
 
+// Connect to Database
 connectDB();
 
+// Mount all Routes
 app.use('/api/jobs', jobRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/tracker', trackerRoutes);
@@ -30,6 +37,7 @@ app.use('/api/profile', profileRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/analytics', analyticsRoutes);
 
+// Health Check
 app.get('/health', (req, res) => {
   res.status(200).json({ message: 'Mirae Backend is running perfectly! 🚀' });
 });
