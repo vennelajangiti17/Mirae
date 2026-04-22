@@ -65,15 +65,19 @@ export function Dashboard() {
   useEffect(() => {
     const loadDashboard = async () => {
       try {
+        console.log('[Dashboard] Loading... Token:', localStorage.getItem('token')?.substring(0, 20) + '...');
         const [summaryData, recentJobs] = await Promise.all([
           getDashboardSummary(),
           getRecentJobs(),
         ]);
 
+        console.log('[Dashboard] Summary:', summaryData);
+        console.log('[Dashboard] Recent jobs count:', recentJobs?.length);
+
         setSummary(summaryData);
         setApplications((recentJobs || []).map(mapJobToApplication));
       } catch (error) {
-        console.error('Dashboard fetch error:', error);
+        console.error('[Dashboard] Fetch error:', error);
       } finally {
         setLoading(false);
       }
