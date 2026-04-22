@@ -1,4 +1,6 @@
 // content.js
+// This leaves a hidden "fingerprint" on any webpage the user visits
+document.documentElement.setAttribute('data-mirae-installed', 'true');
 const getTextBySelector = (selectors) => {
   for (let selector of selectors) {
     const element = document.querySelector(selector);
