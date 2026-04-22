@@ -1,3 +1,4 @@
+// src/app/components/SignupModal.tsx
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { motion } from 'motion/react';
@@ -5,6 +6,7 @@ import { X } from 'lucide-react';
 import { useNavigate } from 'react-router';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
+import { authService } from '../services/authService'; 
 
 interface SignupModalProps {
   onClose: () => void;
@@ -17,27 +19,23 @@ export function SignupModal({ onClose }: SignupModalProps) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
     nameRef.current?.focus();
-
     const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') {
-        onClose();
-      }
+      if (event.key === 'Escape') onClose();
     };
-
     window.addEventListener('keydown', handleKeyDown);
-
     return () => {
       document.body.style.overflow = previousOverflow;
       window.removeEventListener('keydown', handleKeyDown);
     };
   }, [onClose]);
 
-  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setError('');
 
@@ -46,21 +44,29 @@ export function SignupModal({ onClose }: SignupModalProps) {
       return;
     }
 
-    window.localStorage.setItem('isLoggedIn', 'true');
-    onClose();
-    navigate('/dashboard', { replace: true });
+    try {
+      setIsLoading(true);
+      
+      // 🔐 Create the user in the database
+      const data = await authService.register(name, email, password);
+      
+      // Save the token so they don't have to log in again immediately
+      localStorage.setItem('token', data.token);
+      localStorage.setItem('isLoggedIn', 'true');
+      
+      onClose();
+      navigate('/dashboard', { replace: true });
+    } catch (err: any) {
+      setError(err.message || 'Failed to create account. Try a different email.');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return createPortal(
-    <div
-      className="fixed inset-0 z-[2147483647]"
-      aria-modal="true"
-      role="dialog"
-      aria-labelledby="signup-modal-title"
-    >
+    <div className="fixed inset-0 z-[2147483647]" aria-modal="true" role="dialog">
       <motion.button
         type="button"
-        aria-label="Close sign up modal"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
@@ -79,77 +85,54 @@ export function SignupModal({ onClose }: SignupModalProps) {
         >
           <div className="flex items-start justify-between border-b border-border px-6 py-5">
             <div>
-              <h2
-                id="signup-modal-title"
-                className="text-3xl font-bold tracking-tight"
-                style={{ fontFamily: 'var(--font-display)' }}
-              >
-                Sign Up
-              </h2>
-              <p className="mt-1 text-sm text-muted-foreground">
-                Create your account and start tracking opportunities.
-              </p>
+              <h2 className="text-3xl font-bold tracking-tight">Sign Up</h2>
+              <p className="mt-1 text-sm text-muted-foreground">Start tracking your career path.</p>
             </div>
-            <button
-              type="button"
-              onClick={onClose}
-              className="rounded-md p-2 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-              aria-label="Close sign up modal"
-            >
+            <button onClick={onClose} className="rounded-md p-2 text-muted-foreground hover:bg-muted">
               <X className="h-5 w-5" />
             </button>
           </div>
 
           <form className="space-y-5 p-6" onSubmit={handleSubmit}>
             <div className="space-y-2">
-              <label htmlFor="signup-name" className="text-sm font-semibold text-foreground">
-                Name
-              </label>
+              <label className="text-sm font-semibold text-foreground">Full Name</label>
               <Input
-                id="signup-name"
                 ref={nameRef}
                 type="text"
                 value={name}
-                onChange={(event) => setName(event.target.value)}
-                placeholder="Your full name"
+                onChange={(e) => setName(e.target.value)}
+                placeholder="John Doe"
                 className="h-11 bg-background"
+                disabled={isLoading}
               />
             </div>
-
             <div className="space-y-2">
-              <label htmlFor="signup-email" className="text-sm font-semibold text-foreground">
-                Email
-              </label>
+              <label className="text-sm font-semibold text-foreground">Email</label>
               <Input
-                id="signup-email"
                 type="email"
                 value={email}
-                onChange={(event) => setEmail(event.target.value)}
+                onChange={(e) => setEmail(e.target.value)}
                 placeholder="you@example.com"
                 className="h-11 bg-background"
+                disabled={isLoading}
               />
             </div>
-
             <div className="space-y-2">
-              <label htmlFor="signup-password" className="text-sm font-semibold text-foreground">
-                Password
-              </label>
+              <label className="text-sm font-semibold text-foreground">Password</label>
               <Input
-                id="signup-password"
                 type="password"
                 value={password}
-                onChange={(event) => setPassword(event.target.value)}
-                placeholder="Create a password"
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="Create password"
                 className="h-11 bg-background"
+                disabled={isLoading}
               />
             </div>
 
-            {error ? (
-              <p className="text-sm font-medium text-destructive">{error}</p>
-            ) : null}
+            {error && <p className="text-sm font-medium text-destructive">{error}</p>}
 
-            <Button type="submit" className="h-11 w-full">
-              Signup
+            <Button type="submit" className="h-11 w-full" disabled={isLoading}>
+              {isLoading ? "Creating Account..." : "Signup"}
             </Button>
           </form>
         </motion.div>
