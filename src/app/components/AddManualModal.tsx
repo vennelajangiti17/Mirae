@@ -40,7 +40,7 @@ export function AddManualModal({ onClose }: Props) {
           location,
           deadline,
           salaryRange: salary,
-          category: selectedCategory,
+          category: selectedCategory.charAt(0).toUpperCase() + selectedCategory.slice(1),
           description: `Manual entry. Required skills: ${skills}`,
           status: 'Saved'
         })
