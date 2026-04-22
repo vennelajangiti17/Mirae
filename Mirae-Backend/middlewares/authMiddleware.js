@@ -14,7 +14,7 @@ const protect = (req, res, next) => {
       const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
       // Attach the decoded user ID to the request object so the controller can use it
-      req.user = { id: decoded.userId }; 
+      req.user = { id: decoded.id }; 
 
       // Everything is good, move on to the controller!
       next();

@@ -4,6 +4,7 @@ import * as Switch from '@radix-ui/react-switch';
 import * as RadioGroup from '@radix-ui/react-radio-group';
 import * as ToggleGroup from '@radix-ui/react-toggle-group';
 import { useTheme } from '../hooks/useTheme';
+import { authService } from '../services/authService';
 import {
   User,
   Bell,
@@ -95,8 +96,35 @@ export function Settings() {
   const [showResetModal, setShowResetModal] = useState(false);
 
   // Account Settings
-  const [name, setName] = useState('John Doe');
-  const [email] = useState('john.doe@example.com');
+  const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
+  const [initials, setInitials] = useState('MU');
+
+  useEffect(() => {
+    const fetchProfile = async () => {
+      try {
+        const profile = await authService.getProfile();
+        setName(profile.name || 'Mirae User');
+        setEmail(profile.email || 'user@example.com');
+        setInitials(
+          (profile.name || 'Mirae User')
+            .split(' ')
+            .map((n: string) => n[0])
+            .join('')
+            .substring(0, 2)
+            .toUpperCase()
+        );
+      } catch (error) {
+        console.error(error);
+        if (typeof window !== 'undefined') {
+          const localName = localStorage.getItem('userName') || 'Mirae User';
+          setName(localName);
+          setInitials(localName.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase());
+        }
+      }
+    };
+    fetchProfile();
+  }, []);
 
   // Notifications & Reminders
   const [followUpReminders, setFollowUpReminders] = useState(true);
@@ -154,7 +182,7 @@ export function Settings() {
             <div className="flex items-center gap-4 pb-5 mb-5 border-b border-gray-100">
               <div className="relative">
                 <div className="w-20 h-20 rounded-full bg-[#FCA311] flex items-center justify-center text-[#14213D] text-2xl font-bold shadow-lg">
-                  JD
+                  {initials}
                 </div>
                 <motion.button
                   whileHover={{ scale: 1.1 }}

@@ -91,7 +91,9 @@ function AppContent() {
             onClose={() => setShowLogoutConfirm(false)}
             onConfirm={() => {
               setShowLogoutConfirm(false);
-              window.localStorage.removeItem('isLoggedIn');
+              localStorage.removeItem('token');
+              localStorage.removeItem('userName');
+              localStorage.removeItem('isLoggedIn');
               navigate('/', { replace: true });
             }}
           />

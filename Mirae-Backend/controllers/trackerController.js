@@ -12,27 +12,45 @@ exports.createJob = async (req, res) => {
     // 1. 🔍 DYNAMIC FETCH: Get the user's actual resume from the DB
     const user = await User.findById(req.user.id);
     
-    // Fallback if they haven't uploaded a resume yet
-    const resumeToUse = user.resumeText || "No resume provided yet. Focus on extracting job details.";
-
     // 2. Initialize Gemini 2.5-flash
     const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
     const prompt = `
-      Analyze this job description and the user's resume provided below. 
+      Analyze this job description.
+      If the user has provided a resume, compare it to calculate a matchScore (0-100). If the User Resume says "NO_RESUME_PROVIDED", return matchScore as null.
       Return ONLY a JSON object with: 
-      matchScore (0-100), matchedSkills (array), missingSkills (array), 
+      matchScore (number or null), matchedSkills (array), missingSkills (array), 
       location, salaryRange, category ('Jobs', 'Hackathons', or 'Others'), 
       and deadline (ISO string or null).
       
       Job Description: ${incomingData.description}
-      User Resume: ${resumeToUse} 
+      User Resume: ${user.resumeText ? user.resumeText : "NO_RESUME_PROVIDED"} 
     `;
 
     // 3. Run AI Analysis
-    const result = await model.generateContent(prompt);
-    let aiText = result.response.text().replace(/```json/g, '').replace(/```/g, '').trim();
-    const aiAnalysis = JSON.parse(aiText);
+    let aiAnalysis = { 
+      matchScore: null, 
+      matchedSkills: [], 
+      missingSkills: [], 
+      location: '', 
+      salaryRange: '', 
+      category: 'Jobs', 
+      deadline: null 
+    };
+
+    try {
+      const result = await model.generateContent(prompt);
+      let aiText = result.response.text().replace(/```json/g, '').replace(/```/g, '').trim();
+      aiAnalysis = JSON.parse(aiText);
+      
+      // Enforce null match score if no resume is present, just in case AI hallucinates a score
+      if (!user.resumeText) {
+        aiAnalysis.matchScore = null;
+      }
+    } catch (aiError) {
+      console.warn("⚠️ Gemini AI failed (e.g. invalid key or format). Saving job without AI insights.", aiError.message);
+      // We don't throw here, we just let it proceed with the default empty aiAnalysis object.
+    }
 
     // 4. 🔐 SECURE MERGE: Combine raw data, AI insights, and the User's unique ID
     const finalData = { 
@@ -46,13 +64,13 @@ exports.createJob = async (req, res) => {
     await newJob.save();
 
     res.status(201).json({ 
-      message: "AI Analysis Complete and Personalized!", 
+      message: aiAnalysis.matchScore !== null ? "AI Analysis Complete and Personalized!" : "Saved job without AI Analysis due to an error.", 
       job: newJob 
     });
 
   } catch (error) {
     console.error("Tracker Controller Error:", error);
-    res.status(500).json({ error: "Internal Server Error" });
+    res.status(500).json({ error: error.message || "Internal Server Error" });
   }
 };
 

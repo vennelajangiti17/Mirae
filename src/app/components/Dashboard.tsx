@@ -10,11 +10,14 @@ interface Application {
   id: string;
   company: string;
   role: string;
-  matchScore: number;
+  matchScore: number | null;
   appliedDate: string;
   stage: string;
   companyAcronym: string;
   imageUrl: string;
+  description: string;
+  matchedSkills: string[];
+  missingSkills: string[];
 }
 
 const formatDate = (value?: string | null) => {
@@ -36,13 +39,16 @@ const mapJobToApplication = (job: any): Application => ({
   id: job._id,
   company: job.company || 'Unknown Company',
   role: job.title || 'Untitled Role',
-  matchScore: job.matchScore || 0,
+  matchScore: job.matchScore ?? null,
   appliedDate: formatDate(job.appliedDate || job.createdAt),
   stage: job.status || 'Saved',
   companyAcronym: getCompanyAcronym(job.company || 'UC'),
   imageUrl: `https://ui-avatars.com/api/?name=${encodeURIComponent(
     job.company || 'Company'
   )}&background=14213D&color=fff&size=256`,
+  description: job.description || 'No job description provided.',
+  matchedSkills: job.matchedSkills || [],
+  missingSkills: job.missingSkills || [],
 });
 
 export function Dashboard() {
@@ -73,11 +79,19 @@ export function Dashboard() {
       }
     };
 
+    // Sync token with extension when dashboard loads
+    const token = localStorage.getItem('token');
+    if (token) {
+      window.postMessage({ type: "MIRAE_SYNC_TOKEN", token }, "*");
+    }
+
     loadDashboard();
   }, []);
 
   const handleLogout = () => {
-    window.localStorage.removeItem('isLoggedIn');
+    localStorage.removeItem('token');
+    localStorage.removeItem('userName');
+    localStorage.removeItem('isLoggedIn');
     navigate('/', { replace: true });
   };
 
@@ -157,7 +171,9 @@ export function Dashboard() {
           >
             {variant === 'selected'
               ? 'Offer Received!'
-              : `${app.matchScore}% Match`}
+              : app.matchScore !== null
+              ? `${app.matchScore}% Match`
+              : 'Add resume for Match Score'}
           </div>
 
           <div className="flex items-center gap-1 text-xs text-[#14213D] opacity-60">

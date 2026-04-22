@@ -6,11 +6,14 @@ interface Application {
   id: string;
   company: string;
   role: string;
-  matchScore: number;
+  matchScore: number | null;
   appliedDate: string;
   stage: string;
   companyAcronym: string;
   imageUrl: string;
+  description: string;
+  matchedSkills: string[];
+  missingSkills: string[];
 }
 
 interface Props {
@@ -23,8 +26,7 @@ export function ApplicationDetail({ application, onClose }: Props) {
 
   const tabs = ['Overview', 'Timeline & Prep', 'Notes', 'Documents'];
 
-  const matchedSkills = ['Node.js', 'PostgreSQL', 'React', 'TypeScript', 'GraphQL'];
-  const missingSkills = ['Docker', 'AWS', 'Kubernetes'];
+  const { matchedSkills = [], missingSkills = [], description = 'No description available.' } = application;
 
   return (
     <>
@@ -117,64 +119,68 @@ export function ApplicationDetail({ application, onClose }: Props) {
                       strokeWidth="12"
                       fill="none"
                       strokeDasharray={`${2 * Math.PI * 70}`}
-                      strokeDashoffset={`${2 * Math.PI * 70 * (1 - application.matchScore / 100)}`}
+                      strokeDashoffset={`${2 * Math.PI * 70 * (1 - (application.matchScore ?? 0) / 100)}`}
                       className="transition-all duration-1000"
                     />
                   </svg>
                   <div className="absolute inset-0 flex flex-col items-center justify-center">
                     <span className="text-4xl font-bold text-[#FCA311]" style={{ fontFamily: 'var(--font-display)' }}>
-                      {application.matchScore}%
+                      {application.matchScore !== null ? `${application.matchScore}%` : 'N/A'}
                     </span>
                     <span className="text-sm text-[#14213D]">Match Score</span>
                   </div>
                 </div>
               </div>
 
+              {/* Match Score Disclaimer / Fallback */}
+              {application.matchScore === null && (
+                <div className="mb-8 p-4 bg-yellow-50 rounded-lg border border-yellow-200">
+                  <p className="text-yellow-800 text-sm text-center">
+                    We couldn't calculate a match score. Please make sure you have uploaded a resume in your profile.
+                  </p>
+                </div>
+              )}
+
               {/* Skill Gap Analysis */}
               <div className="mb-8">
                 <h3 className="text-lg font-bold text-[#000000] mb-4">Matched Skills</h3>
                 <div className="flex flex-wrap gap-2 mb-6">
-                  {matchedSkills.map((skill) => (
-                    <span
-                      key={skill}
-                      className="px-3 py-2 bg-[#14213D] text-white rounded-md text-sm font-medium"
-                    >
-                      {skill}
-                    </span>
-                  ))}
+                  {matchedSkills.length > 0 ? (
+                    matchedSkills.map((skill) => (
+                      <span
+                        key={skill}
+                        className="px-3 py-2 bg-[#14213D] text-white rounded-md text-sm font-medium"
+                      >
+                        {skill}
+                      </span>
+                    ))
+                  ) : (
+                    <span className="text-sm text-gray-500">No matching skills found or AI analysis pending.</span>
+                  )}
                 </div>
 
                 <h3 className="text-lg font-bold text-[#000000] mb-4">Missing Skills</h3>
                 <div className="flex flex-wrap gap-2">
-                  {missingSkills.map((skill) => (
-                    <span
-                      key={skill}
-                      className="px-3 py-2 bg-[#E5E5E5] text-[#000000] rounded-md text-sm font-medium"
-                    >
-                      {skill}
-                    </span>
-                  ))}
+                  {missingSkills.length > 0 ? (
+                    missingSkills.map((skill) => (
+                      <span
+                        key={skill}
+                        className="px-3 py-2 bg-[#E5E5E5] text-[#000000] rounded-md text-sm font-medium"
+                      >
+                        {skill}
+                      </span>
+                    ))
+                  ) : (
+                    <span className="text-sm text-gray-500">No missing skills found.</span>
+                  )}
                 </div>
               </div>
 
               {/* Job Description */}
               <div>
                 <h3 className="text-lg font-bold text-[#000000] mb-4">Job Description</h3>
-                <div className="bg-[#E5E5E5] bg-opacity-30 rounded-md p-4 text-[#000000] leading-relaxed text-sm">
-                  <p className="mb-4">
-                    We're looking for an experienced engineer to join our team. You'll be working on building
-                    scalable web applications using modern technologies like{' '}
-                    <span className="bg-[#FCA311] bg-opacity-30 px-1 rounded">React</span>,{' '}
-                    <span className="bg-[#FCA311] bg-opacity-30 px-1 rounded">Node.js</span>, and{' '}
-                    <span className="bg-[#FCA311] bg-opacity-30 px-1 rounded">PostgreSQL</span>.
-                  </p>
-                  <p className="mb-4">
-                    You should have strong experience with <span className="bg-[#FCA311] bg-opacity-30 px-1 rounded">TypeScript</span> and
-                    modern API development using <span className="bg-[#FCA311] bg-opacity-30 px-1 rounded">GraphQL</span>.
-                  </p>
-                  <p>
-                    Familiarity with containerization technologies like Docker and cloud platforms like AWS would be a plus.
-                  </p>
+                <div className="bg-[#E5E5E5] bg-opacity-30 rounded-md p-4 text-[#000000] leading-relaxed text-sm whitespace-pre-wrap max-h-96 overflow-y-auto">
+                  {description}
                 </div>
               </div>
             </motion.div>

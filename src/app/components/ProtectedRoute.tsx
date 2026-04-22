@@ -6,7 +6,9 @@ interface ProtectedRouteProps {
 }
 
 export function ProtectedRoute({ children }: ProtectedRouteProps) {
-  const isLoggedIn = typeof window !== 'undefined' && window.localStorage.getItem('isLoggedIn') === 'true';
+  const isLoggedIn = typeof window !== 'undefined'
+    && window.localStorage.getItem('isLoggedIn') === 'true'
+    && !!window.localStorage.getItem('token');
 
   if (!isLoggedIn) {
     return <Navigate to="/" replace />;

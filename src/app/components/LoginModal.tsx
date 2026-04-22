@@ -54,18 +54,7 @@ export function LoginModal({ onClose }: LoginModalProps) {
       localStorage.setItem('isLoggedIn', 'true'); 
       
       // 🔄 SYNC WITH EXTENSION
-      const EXTENSION_ID = "bdgphanpcmamocjgmijgbpdbhhjfbcbg"; 
-      if (window.chrome && window.chrome.runtime) {
-        try {
-          window.chrome.runtime.sendMessage(
-            EXTENSION_ID, 
-            { message: "syncToken", token: data.token },
-            (response) => console.log("Extension synced:", response)
-          );
-        } catch (e) {
-          console.log("Extension not installed or not ready.");
-        }
-      }
+      window.postMessage({ type: "MIRAE_SYNC_TOKEN", token: data.token }, "*");
 
       onClose();
       navigate('/dashboard', { replace: true });

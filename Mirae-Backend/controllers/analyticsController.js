@@ -1,8 +1,10 @@
 const Job = require('../models/Job');
+const mongoose = require('mongoose');
 
 const getAnalyticsOverview = async (req, res) => {
   try {
-    const jobs = await Job.find().select(
+    const userId = req.user.id;
+    const jobs = await Job.find({ userId }).select(
       'status matchScore matchedSkills missingSkills company title createdAt'
     );
 
@@ -13,10 +15,12 @@ const getAnalyticsOverview = async (req, res) => {
     const applied = jobs.filter((job) => job.status === 'Applied').length;
     const saved = jobs.filter((job) => job.status === 'Saved').length;
 
+    // Only average jobs that actually have a match score (not null)
+    const scoredJobs = jobs.filter((job) => job.matchScore !== null && job.matchScore !== undefined);
     const avgMatchScore =
-      totalJobs > 0
+      scoredJobs.length > 0
         ? Math.round(
-            jobs.reduce((sum, job) => sum + (job.matchScore || 0), 0) / totalJobs
+            scoredJobs.reduce((sum, job) => sum + job.matchScore, 0) / scoredJobs.length
           )
         : 0;
 
@@ -49,7 +53,11 @@ const getAnalyticsOverview = async (req, res) => {
 
 const getStatusBreakdown = async (req, res) => {
   try {
+    const userId = new mongoose.Types.ObjectId(req.user.id);
     const breakdown = await Job.aggregate([
+      {
+        $match: { userId },
+      },
       {
         $group: {
           _id: '$status',
@@ -73,9 +81,11 @@ const getStatusBreakdown = async (req, res) => {
 
 const getTrends = async (req, res) => {
   try {
+    const userId = new mongoose.Types.ObjectId(req.user.id);
     const trends = await Job.aggregate([
       {
         $match: {
+          userId,
           createdAt: { $ne: null },
         },
       },
@@ -136,3 +146,4 @@ module.exports = {
   getStatusBreakdown,
   getTrends,
 };
+

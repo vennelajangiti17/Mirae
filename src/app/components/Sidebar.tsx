@@ -73,8 +73,10 @@ export function Sidebar({
             <User className="w-5 h-5 text-[#14213D]" />
           </div>
           <div className="text-left">
-            <div className="text-sm font-medium text-white">Alex Chen</div>
-            <div className="text-xs text-[#E5E5E5]">Software Engineer</div>
+            <div className="text-sm font-medium text-white">
+              {typeof window !== 'undefined' ? localStorage.getItem('userName') || 'Mirae User' : 'Mirae User'}
+            </div>
+            <div className="text-xs text-[#E5E5E5]">Job Seeker</div>
           </div>
         </button>
       </div>

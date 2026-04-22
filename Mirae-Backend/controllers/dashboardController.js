@@ -10,12 +10,12 @@ const getDashboardSummary = async (req, res) => {
       offers,
       rejected,
     ] = await Promise.all([
-      Job.countDocuments(),
-      Job.countDocuments({ status: 'Saved' }),
-      Job.countDocuments({ status: 'Applied' }),
-      Job.countDocuments({ status: 'Interviewing' }),
-      Job.countDocuments({ status: 'Offer' }),
-      Job.countDocuments({ status: 'Rejected' }),
+      Job.countDocuments({ userId: req.user.id }),
+      Job.countDocuments({ userId: req.user.id, status: 'Saved' }),
+      Job.countDocuments({ userId: req.user.id, status: 'Applied' }),
+      Job.countDocuments({ userId: req.user.id, status: 'Interviewing' }),
+      Job.countDocuments({ userId: req.user.id, status: 'Offer' }),
+      Job.countDocuments({ userId: req.user.id, status: 'Rejected' }),
     ]);
 
     res.status(200).json({
@@ -33,11 +33,11 @@ const getDashboardSummary = async (req, res) => {
 
 const getRecentJobs = async (req, res) => {
   try {
-    const recentJobs = await Job.find()
+    const recentJobs = await Job.find({ userId: req.user.id })
       .sort({ createdAt: -1 })
-      .limit(8)
+      .limit(50)
       .select(
-        'company title status url matchScore matchedSkills missingSkills salaryRange location appliedDate createdAt'
+        'company title status url description matchScore matchedSkills missingSkills salaryRange location appliedDate createdAt'
       );
 
     res.status(200).json(recentJobs);

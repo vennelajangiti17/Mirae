@@ -50,7 +50,9 @@ export function ProfilePopover({ onClose, onManageResumes, onSocialPortfolio, on
               onMouseLeave={() => setIsHoveringAvatar(false)}
             >
               <div className="w-12 h-12 rounded-full bg-[#FCA311] flex items-center justify-center text-[#000000] font-bold text-lg relative overflow-hidden cursor-pointer">
-                <span className={`transition-opacity ${isHoveringAvatar ? 'opacity-30' : 'opacity-100'}`}>AC</span>
+                <span className={`transition-opacity ${isHoveringAvatar ? 'opacity-30' : 'opacity-100'}`}>
+                  {typeof window !== 'undefined' ? (localStorage.getItem('userName') || 'Mirae User').split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase() : 'MU'}
+                </span>
                 <AnimatePresence>
                   {isHoveringAvatar && (
                     <>
@@ -78,8 +80,10 @@ export function ProfilePopover({ onClose, onManageResumes, onSocialPortfolio, on
 
             {/* User Info */}
             <div className="flex-1">
-              <div className="font-bold text-[#000000]">Alex Chen</div>
-              <div className="text-xs text-[#73766A]">Software Engineer</div>
+              <div className="font-bold text-[#000000]">
+                {typeof window !== 'undefined' ? localStorage.getItem('userName') || 'Mirae User' : 'Mirae User'}
+              </div>
+              <div className="text-xs text-[#73766A]">Job Seeker</div>
             </div>
           </div>
         </div>

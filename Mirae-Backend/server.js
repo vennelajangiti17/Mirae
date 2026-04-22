@@ -16,11 +16,7 @@ const app = express();
 // 🛡️ CORS Policy configured for Frontend + Extension
 app.use(
   cors({
-    origin: [
-      'http://localhost:3000', 
-      'http://localhost:5173',
-      'chrome-extension://bdgphanpcmamocjgmijgbpdbhhjfbcbg'
-    ],
+    origin: true,
     credentials: true,
   })
 );

@@ -34,7 +34,11 @@ const scrapeAndSendToMirae = () => {
       }
 
       if (response && response.success) {
-        alert(`✨ Success! "${jobData.title}" analyzed by AI and saved to Mirae with a Match Score of ${response.data.job.matchScore}%!`);
+        const score = response.data.job.matchScore;
+        const scoreMsg = score !== null && score !== undefined
+          ? ` with a Match Score of ${score}%`
+          : `. Upload your resume on the dashboard to get a Match Score`;
+        alert(`✨ Success! "${jobData.title}" analyzed by AI and saved to Mirae${scoreMsg}!`);
       } else {
         alert(`❌ Mirae Error: ${response ? response.error : 'Unknown error occurred.'}`);
       }
@@ -49,4 +53,16 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     sendResponse({ status: "scraping_started" });
   }
   return true;
+});
+
+// 🔄 Listen for token sync from the React dashboard
+window.addEventListener("message", (event) => {
+  if (event.source === window && event.data && event.data.type === "MIRAE_SYNC_TOKEN") {
+    chrome.runtime.sendMessage(
+      { action: "syncToken", token: event.data.token },
+      (response) => {
+        console.log("Mirae Extension:", response ? response.message : "Token sync failed");
+      }
+    );
+  }
 });

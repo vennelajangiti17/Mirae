@@ -1,7 +1,17 @@
 const API_BASE = 'http://127.0.0.1:5000/api';
 
+const getAuthHeaders = () => {
+  const token = localStorage.getItem('token');
+  return {
+    'Content-Type': 'application/json',
+    'Authorization': `Bearer ${token}`
+  };
+};
+
 export async function getAnalyticsOverview() {
-  const response = await fetch(`${API_BASE}/analytics/overview`);
+  const response = await fetch(`${API_BASE}/analytics/overview`, {
+    headers: getAuthHeaders()
+  });
 
   if (!response.ok) {
     throw new Error('Failed to fetch analytics overview');
@@ -11,7 +21,9 @@ export async function getAnalyticsOverview() {
 }
 
 export async function getStatusBreakdown() {
-  const response = await fetch(`${API_BASE}/analytics/status-breakdown`);
+  const response = await fetch(`${API_BASE}/analytics/status-breakdown`, {
+    headers: getAuthHeaders()
+  });
 
   if (!response.ok) {
     throw new Error('Failed to fetch status breakdown');
@@ -21,7 +33,9 @@ export async function getStatusBreakdown() {
 }
 
 export async function getTrends() {
-  const response = await fetch(`${API_BASE}/analytics/trends`);
+  const response = await fetch(`${API_BASE}/analytics/trends`, {
+    headers: getAuthHeaders()
+  });
 
   if (!response.ok) {
     throw new Error('Failed to fetch trends');
@@ -29,3 +43,4 @@ export async function getTrends() {
 
   return response.json();
 }
+

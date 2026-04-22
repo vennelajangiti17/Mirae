@@ -34,6 +34,13 @@ chrome.runtime.onMessageExternal.addListener((request, sender, sendResponse) => 
 
 // --- 🔄 RELAY FOR THE CONTENT SCRIPT ---
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+  if (request.action === "syncToken") {
+    chrome.storage.local.set({ token: request.token }, () => {
+      sendResponse({ success: true, message: "Token synced to extension via content script!" });
+    });
+    return true;
+  }
+
   if (request.action === "saveJob") {
     
     // Grab the user's token from storage

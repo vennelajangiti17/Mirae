@@ -19,9 +19,43 @@ export function AddManualModal({ onClose }: Props) {
 
   const sampleSkills = ['React', 'Python', 'TypeScript', 'Node.js', 'AWS'];
 
-  const handleSubmit = () => {
-    // Handle form submission
-    onClose();
+  const handleSubmit = async () => {
+    if (!title) {
+      alert("Please enter a title.");
+      return;
+    }
+
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch('http://localhost:5000/api/tracker', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          title,
+          company,
+          url,
+          location,
+          deadline,
+          salaryRange: salary,
+          category: selectedCategory,
+          description: `Manual entry. Required skills: ${skills}`,
+          status: 'Saved'
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to save opportunity');
+      }
+
+      alert('Successfully added to your pipeline! Please refresh the dashboard.');
+      onClose();
+    } catch (error) {
+      console.error(error);
+      alert('Error saving opportunity. Is the backend running?');
+    }
   };
 
   useEffect(() => {
