@@ -1,17 +1,41 @@
-// models/Job.js
 const mongoose = require('mongoose');
 
 const jobSchema = new mongoose.Schema({
+  // 1. Core Scraped Data (From the Chrome Extension)
   title: { type: String, required: true },
   company: { type: String, required: true },
   url: { type: String, required: true },
-  description: { type: String }, // Not required, just in case scraping fails
+  description: { type: String },
+  
+  // 2. Kanban Dashboard Status
   status: {
     type: String,
     enum: ['Saved', 'Applied', 'Interviewing', 'Offer', 'Rejected'],
-    default: 'Saved' // Every new scraped job starts as 'Saved'
+    default: 'Saved' // Every new scraped job starts here automatically
   },
-  dateAdded: { type: Date, default: Date.now }
+
+  // 3. Smart Features (Populated later by your AI backend)
+  matchScore: { type: Number, default: null }, // e.g., 88
+  matchedSkills: { type: [String], default: [] }, // Array of strings: ['React', 'Node.js']
+  missingSkills: { type: [String], default: [] }, // Array of strings: ['Docker', 'AWS']
+
+  // 4. Details (Can be scraped, or added manually later via your popup form)
+  location: { type: String, default: '' },
+  salaryRange: { type: String, default: '' },
+  category: { 
+    type: String, 
+    enum: ['Jobs', 'Hackathons', 'Others'], 
+    default: 'Jobs' 
+  },
+  
+  // 5. Timeline & Tracking
+  deadline: { type: Date, default: null },
+  appliedDate: { type: Date, default: null },
+  notes: { type: String, default: '' }
+
+}, { 
+  // This automatically adds 'createdAt' and 'updatedAt' timestamps to every document!
+  timestamps: true 
 });
 
 module.exports = mongoose.model('Job', jobSchema);
