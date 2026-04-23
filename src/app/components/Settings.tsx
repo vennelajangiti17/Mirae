@@ -130,6 +130,8 @@ export function Settings() {
   const [profilePhoto, setProfilePhoto] = useState('');
   const [draftName, setDraftName] = useState('User');
   const [draftEmail, setDraftEmail] = useState('user@example.com');
+
+  const currentProfilePhoto = profilePhoto || user?.profilePhoto || '';
   const [isEditingProfile, setIsEditingProfile] = useState(false);
   const [showPasswordModal, setShowPasswordModal] = useState(false);
   const [showDeleteAccountModal, setShowDeleteAccountModal] = useState(false);
@@ -375,8 +377,8 @@ export function Settings() {
           <SectionCard icon={<User size={22} />} title="Account Settings" subtitle="Manage your profile information">
             <div className="mb-5 flex items-center gap-4 border-b border-gray-100 pb-5">
               <div className="relative">
-                {profilePhoto ? (
-                  <img src={profilePhoto} alt="Profile" className="h-20 w-20 rounded-full object-cover shadow-md" />
+                {currentProfilePhoto ? (
+                  <img src={currentProfilePhoto} alt="Profile" className="h-20 w-20 rounded-full object-cover shadow-md" />
                 ) : (
                   <div className="flex h-20 w-20 items-center justify-center rounded-full bg-[#FCA311] text-2xl font-bold text-[#14213D]">
                     {initials}

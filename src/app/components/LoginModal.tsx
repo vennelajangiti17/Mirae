@@ -6,7 +6,8 @@ import { X } from 'lucide-react';
 import { useNavigate } from 'react-router';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
-import { authService } from '../services/authService'; 
+import { authService } from '../services/authService';
+import { useUser } from '../contexts/UserContext'; 
 
 interface LoginModalProps {
   onClose: () => void;
@@ -34,6 +35,8 @@ export function LoginModal({ onClose }: LoginModalProps) {
     };
   }, [onClose]);
 
+  const { refetchProfile } = useUser();
+
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setError('');
@@ -52,6 +55,9 @@ export function LoginModal({ onClose }: LoginModalProps) {
       localStorage.setItem('token', data.token);
       localStorage.setItem('userName', data.user.name); // Fixes the hardcoded sidebar name!
       localStorage.setItem('isLoggedIn', 'true'); 
+      
+      // Refresh the global profile immediately after login
+      await refetchProfile();
       
       // 🔄 SYNC WITH EXTENSION
       window.postMessage({ type: "MIRAE_SYNC_TOKEN", token: data.token }, "*");

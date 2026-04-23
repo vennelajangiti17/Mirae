@@ -35,6 +35,12 @@ export function UserProvider({ children }: UserProviderProps) {
       if (profileData.name) {
         localStorage.setItem('userName', profileData.name);
       }
+      if (profileData.email) {
+        localStorage.setItem('userEmail', profileData.email);
+      }
+      if (profileData.profilePhoto) {
+        localStorage.setItem('userProfilePhoto', profileData.profilePhoto);
+      }
     } catch (err) {
       console.error('Failed to fetch profile:', err);
       setError(err instanceof Error ? err.message : 'Failed to fetch profile');
