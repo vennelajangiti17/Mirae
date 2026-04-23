@@ -197,6 +197,11 @@ const parseDeadline = (raw) => {
   return null;
 };
 
+const hasMeaningfulValue = (value) => {
+  const text = String(value || '').trim();
+  return Boolean(text) && !/^(not specified|unknown|n\/a|na|none|null|undefined)$/i.test(text);
+};
+
 // Main handler: AI analysis via Groq (Llama 3) + save
 exports.createJob = async (req, res) => {
   try {
@@ -205,10 +210,11 @@ exports.createJob = async (req, res) => {
     // Support BOTH old format (title/company/description) and new omni-scraper format (rawText)
     const rawText = incomingData.rawText || incomingData.description || '';
     const url = incomingData.url || '';
+    const isManualEntry = Boolean(incomingData.title && incomingData.company);
 
     console.log("📥 Tracker received:", { url: url.substring(0, 60), textLength: rawText.length });
 
-    if (rawText.length < 50) {
+    if (rawText.length < 50 && !isManualEntry) {
       return res.status(400).json({ error: "Not enough text captured from the page. Try refreshing and scraping again." });
     }
 
@@ -303,8 +309,16 @@ ${rawText.substring(0, 6000)}`;
       console.warn("⚠️ Groq AI failed. Saving with URL-based fallback.", aiError.message);
     }
 
-    // 4. Fallback company from URL if AI also couldn't find it
-    const finalCompany = (aiResult.company && aiResult.company !== 'Unknown Company' && aiResult.company !== 'Unknown')
+    // 4. Prefer explicit manual values when the dashboard form provides them.
+    const finalTitle = hasMeaningfulValue(incomingData.title)
+      ? incomingData.title.trim()
+      : hasMeaningfulValue(aiResult.title)
+      ? aiResult.title
+      : 'Untitled Position';
+
+    const finalCompany = hasMeaningfulValue(incomingData.company)
+      ? incomingData.company.trim()
+      : (aiResult.company && aiResult.company !== 'Unknown Company' && aiResult.company !== 'Unknown')
       ? aiResult.company
       : companyFromUrl(url);
 
@@ -365,20 +379,20 @@ ${rawText.substring(0, 6000)}`;
       rawText.substring(0, 2000)
     ].join(' ');
 
-    const finalCategory = normalizeCategory(aiResult.category, categoryContext);
-    const finalDeadline = parseDeadline(aiResult.deadline);
+    const finalCategory = normalizeCategory(incomingData.category || aiResult.category, categoryContext);
+    const finalDeadline = parseDeadline(incomingData.deadline) || parseDeadline(aiResult.deadline);
 
     // 6. Build final document
     const finalData = {
-      title: aiResult.title || 'Untitled Position',
+      title: finalTitle,
       company: finalCompany,
       url: url || 'https://unknown',
       description: safeDescription,
       matchScore: safeMatchScore,
       skills: safeSkills,
-      location: aiResult.location || '',
+      location: incomingData.location || aiResult.location || '',
       postedDate: aiResult.postedDate || '',
-      salary: aiResult.salary || aiResult.salaryRange || '',
+      salary: incomingData.salaryRange || incomingData.salary || aiResult.salary || aiResult.salaryRange || '',
       deadline: finalDeadline,
       category: finalCategory,
       status: 'Saved',

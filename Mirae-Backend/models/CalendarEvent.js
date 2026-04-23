@@ -40,12 +40,29 @@ const calendarEventSchema = new mongoose.Schema({
     trim: true,
     default: '',
   },
+  applyLink: {
+    type: String,
+    trim: true,
+    default: '',
+  },
   userId: {
     type: String,
     index: true,
-    default: '',
+    required: true,
   },
   googleEventId: {
+    type: String,
+    trim: true,
+    default: '',
+    index: true,
+  },
+  source: {
+    type: String,
+    enum: ['manual', 'dashboard', 'google'],
+    default: 'manual',
+    index: true,
+  },
+  sourceId: {
     type: String,
     trim: true,
     default: '',
@@ -54,5 +71,9 @@ const calendarEventSchema = new mongoose.Schema({
 }, {
   timestamps: true,
 });
+
+calendarEventSchema.index({ userId: 1, date: 1 });
+calendarEventSchema.index({ userId: 1, source: 1, sourceId: 1 });
+calendarEventSchema.index({ userId: 1, googleEventId: 1 });
 
 module.exports = mongoose.model('CalendarEvent', calendarEventSchema);
