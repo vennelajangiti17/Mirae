@@ -44,3 +44,17 @@ export async function deleteDashboardJob(jobId: string) {
 
   return response.json();
 }
+
+export async function updateJobStatus(jobId: string, status: string) {
+  const response = await fetch(`${API_BASE}/tracker/${jobId}/status`, {
+    method: 'PUT',
+    headers: getAuthHeaders(),
+    body: JSON.stringify({ status }),
+  });
+
+  if (!response.ok) {
+    throw new Error('Failed to update job status');
+  }
+
+  return response.json();
+}

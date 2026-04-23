@@ -15,6 +15,7 @@ import {
   deleteDashboardJob,
   getDashboardSummary,
   getRecentJobs,
+  updateJobStatus,
 } from '../services/dashboardService';
 
 type DashboardTab = 'jobs' | 'hackathons' | 'others';
@@ -100,7 +101,7 @@ const mapJobToApplication = (job: any): Application => ({
   description: job.description || 'No job description provided.',
   location: job.location || 'Unknown Location',
   postedDate: job.postedDate || 'Unknown Date',
-  salaryRange: job.salaryRange || '',
+  salaryRange: job.salary || job.salaryRange || '',
   skills: {
     all: job.skills?.all || [],
     matched: job.skills?.matched || job.matchedSkills || [],
@@ -199,6 +200,30 @@ export function Dashboard() {
       window.alert('Failed to delete card. Please try again.');
     } finally {
       setDeletingId(null);
+    }
+  };
+
+  const handleStatusChange = async (appId: string, newStatus: string) => {
+    try {
+      await updateJobStatus(appId, newStatus);
+      
+      // Update local state instantly to reflect the new tab/stage
+      setApplications((currentApps) => {
+        const nextApps = currentApps.map(app => 
+          app.id === appId ? { ...app, stage: newStatus } : app
+        );
+        setSummary(buildSummary(nextApps));
+        
+        // Also update the selectedApp if it's currently open
+        if (selectedApp?.id === appId) {
+          setSelectedApp(prev => prev ? { ...prev, stage: newStatus } : null);
+        }
+        
+        return nextApps;
+      });
+    } catch (error) {
+      console.error('[Dashboard] Update status error:', error);
+      window.alert('Failed to update status. Please try again.');
     }
   };
 
@@ -562,6 +587,7 @@ export function Dashboard() {
         <ApplicationDetail
           application={selectedApp}
           onClose={() => setSelectedApp(null)}
+          onStatusChange={handleStatusChange}
         />
       )}
 
