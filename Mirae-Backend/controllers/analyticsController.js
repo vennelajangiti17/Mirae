@@ -26,8 +26,9 @@ const getAnalyticsOverview = async (req, res) => {
 
     const skillCounts = {};
     jobs.forEach((job) => {
-      const matched = job.skills?.matched || job.matchedSkills || [];
-      matched.forEach((skill) => {
+      const requiredSkills = job.skills?.all || job.skills?.matched || job.matchedSkills || [];
+      requiredSkills.forEach((skill) => {
+        if (!skill || skill === 'Unknown' || skill === 'Not specified') return;
         skillCounts[skill] = (skillCounts[skill] || 0) + 1;
       });
     });
@@ -49,34 +50,6 @@ const getAnalyticsOverview = async (req, res) => {
     });
   } catch (error) {
     res.status(500).json({ error: 'Failed to fetch analytics overview' });
-  }
-};
-
-const getStatusBreakdown = async (req, res) => {
-  try {
-    const userId = new mongoose.Types.ObjectId(req.user.id);
-    const breakdown = await Job.aggregate([
-      {
-        $match: { userId, category: 'Jobs' },
-      },
-      {
-        $group: {
-          _id: '$status',
-          count: { $sum: 1 },
-        },
-      },
-      {
-        $project: {
-          _id: 0,
-          status: '$_id',
-          count: 1,
-        },
-      },
-    ]);
-
-    res.status(200).json(breakdown);
-  } catch (error) {
-    res.status(500).json({ error: 'Failed to fetch status breakdown' });
   }
 };
 
@@ -143,9 +116,118 @@ const getTrends = async (req, res) => {
   }
 };
 
+
+const getSkillGapAnalysis = async (req, res) => {
+  try {
+    const userId = new mongoose.Types.ObjectId(req.user.id);
+    const skillGapData = await Job.aggregate([
+      { $match: { userId, category: 'Jobs' } },
+      { $unwind: '$skills.missing' },
+      {
+        $match: {
+          'skills.missing': {
+            $type: 'string',
+            $nin: ['', 'Unknown', 'Not specified'],
+          },
+        },
+      },
+      {
+        $group: {
+          _id: '$skills.missing',
+          frequency: { $sum: 1 },
+        },
+      },
+      { $sort: { frequency: -1, _id: 1 } },
+      { $limit: 5 },
+      {
+        $project: {
+          _id: 0,
+          skill: '$_id',
+          frequency: 1,
+        },
+      },
+    ]);
+
+    res.status(200).json(skillGapData);
+  } catch (error) {
+    console.error('[Analytics API] Skill gap error:', error);
+    res.status(500).json({ error: 'Failed to fetch skill gap analysis' });
+  }
+};
+
+const getMatchInsights = async (req, res) => {
+  try {
+    const userId = new mongoose.Types.ObjectId(req.user.id);
+    const [result] = await Job.aggregate([
+      {
+        $match: {
+          userId,
+          category: 'Jobs',
+        },
+      },
+      {
+        $facet: {
+          allJobsAverage: [
+            { $match: { matchScore: { $ne: null } } },
+            { $group: { _id: null, avgScore: { $avg: '$matchScore' } } },
+          ],
+          interviewAverage: [
+            {
+              $match: {
+                status: { $in: ['Interviewing', 'Offer', 'Offered'] },
+                matchScore: { $ne: null },
+              },
+            },
+            { $group: { _id: null, avgScore: { $avg: '$matchScore' } } },
+          ],
+          rejectedJobs: [
+            { $match: { status: 'Rejected' } },
+            { $sort: { updatedAt: -1 } },
+            { $limit: 4 },
+            {
+              $project: {
+                _id: 0,
+                company: 1,
+                title: 1,
+                rejectionReason: 1,
+              },
+            },
+          ],
+          offeredJobs: [
+            { $match: { status: { $in: ['Offer', 'Offered'] } } },
+            { $sort: { updatedAt: -1 } },
+            { $limit: 4 },
+            {
+              $project: {
+                _id: 0,
+                company: 1,
+                title: 1,
+              },
+            },
+          ],
+        },
+      },
+    ]);
+
+    const allJobsAverage = Math.round(result?.allJobsAverage?.[0]?.avgScore || 0);
+    const interviewAverage = Math.round(result?.interviewAverage?.[0]?.avgScore || 0);
+
+    res.status(200).json({
+      allJobsAverage,
+      interviewAverage,
+      rejectedJobs: result?.rejectedJobs || [],
+      offeredJobs: result?.offeredJobs || [],
+    });
+  } catch (error) {
+    console.error('[Analytics API] Match insights error:', error);
+    res.status(500).json({ error: 'Failed to fetch match insights' });
+  }
+};
+
 module.exports = {
   getAnalyticsOverview,
-  getStatusBreakdown,
   getTrends,
+  getSkillGapAnalysis,
+  getMatchInsights,
 };
 

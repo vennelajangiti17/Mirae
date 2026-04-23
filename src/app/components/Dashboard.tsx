@@ -18,6 +18,8 @@ import {
   getDashboardSummary,
   getRecentJobs,
   updateJobStatus,
+  updateJobContacts,
+  updateJobNotes,
 } from '../services/dashboardService';
 
 type DashboardTab = 'jobs' | 'hackathons' | 'others';
@@ -45,6 +47,15 @@ interface Application {
     matched: string[];
     missing: string[];
   };
+  history: {
+    status: string;
+    date: string;
+  }[];
+  contacts?: {
+    recruiterName: string;
+    hiringManager: string;
+  };
+  notes?: string;
 }
 
 interface SectionConfig {
@@ -118,7 +129,20 @@ const mapJobToApplication = (job: any): Application => ({
     all: job.skills?.all || [],
     matched: job.skills?.matched || job.matchedSkills || [],
     missing: job.skills?.missing || job.missingSkills || []
-  }
+  },
+  history: Array.isArray(job.history)
+    ? job.history
+        .filter((event) => event && event.status)
+        .map((event) => ({
+          status: event.status,
+          date: event.date || job.createdAt || new Date().toISOString(),
+        }))
+    : [],
+  contacts: {
+    recruiterName: job.contacts?.recruiterName || '',
+    hiringManager: job.contacts?.hiringManager || '',
+  },
+  notes: job.notes || '',
 });
 
 const buildSummary = (apps: Application[]) => ({
@@ -209,15 +233,22 @@ export function Dashboard() {
 
   const handleStatusChange = async (appId: string, newStatus: string) => {
     try {
-      await updateJobStatus(appId, newStatus);
+      const response = await updateJobStatus(appId, newStatus);
+      const updatedApp = response?.job ? mapJobToApplication(response.job) : null;
 
       setApplications((currentApps) => {
         const nextApps = currentApps.map((app) =>
-          app.id === appId ? { ...app, stage: newStatus } : app
+          app.id === appId
+            ? updatedApp || { ...app, stage: newStatus }
+            : app
         );
 
         if (selectedApp?.id === appId) {
-          setSelectedApp((prev) => (prev ? { ...prev, stage: newStatus } : null));
+          setSelectedApp((prev) =>
+            prev
+              ? updatedApp || { ...prev, stage: newStatus }
+              : null
+          );
         }
 
         return nextApps;
@@ -226,6 +257,38 @@ export function Dashboard() {
       console.error('[Dashboard] Update status error:', error);
       window.alert('Failed to update status. Please try again.');
     }
+  };
+
+
+  const handleContactsSaved = async (
+    appId: string,
+    recruiterName: string,
+    hiringManager: string
+  ) => {
+    const response = await updateJobContacts(appId, recruiterName, hiringManager);
+    const updatedApp = response?.job ? mapJobToApplication(response.job) : null;
+
+    if (!updatedApp) return;
+
+    setApplications((currentApps) =>
+      currentApps.map((app) => (app.id === appId ? updatedApp : app))
+    );
+
+    setSelectedApp((prev) => (prev?.id === appId ? updatedApp : prev));
+  };
+
+
+  const handleNotesSaved = async (appId: string, notes: string) => {
+    const response = await updateJobNotes(appId, notes);
+    const updatedApp = response?.job ? mapJobToApplication(response.job) : null;
+
+    if (!updatedApp) return;
+
+    setApplications((currentApps) =>
+      currentApps.map((app) => (app.id === appId ? updatedApp : app))
+    );
+
+    setSelectedApp((prev) => (prev?.id === appId ? updatedApp : prev));
   };
 
   const filteredApps = useMemo(() => {
@@ -574,6 +637,8 @@ export function Dashboard() {
             application={selectedApp}
             onClose={() => setSelectedApp(null)}
             onStatusChange={handleStatusChange}
+            onContactsSaved={handleContactsSaved}
+            onNotesSaved={handleNotesSaved}
           />
         ) : (
           <OpportunityDetail

@@ -41,7 +41,16 @@ const jobSchema = new mongoose.Schema({
   
   // 5. Timeline & Tracking
   deadline: { type: Date, default: null },
+  rejectionReason: { type: String, default: 'Not specified' },
   appliedDate: { type: Date, default: null },
+  history: [{
+    status: { type: String },
+    date: { type: Date, default: Date.now }
+  }],
+  contacts: {
+    recruiterName: { type: String, default: '' },
+    hiringManager: { type: String, default: '' }
+  },
   notes: { type: String, default: '' }
 
 }, { 

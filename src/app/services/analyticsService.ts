@@ -20,18 +20,6 @@ export async function getAnalyticsOverview() {
   return response.json();
 }
 
-export async function getStatusBreakdown() {
-  const response = await fetch(`${API_BASE}/analytics/status-breakdown`, {
-    headers: getAuthHeaders()
-  });
-
-  if (!response.ok) {
-    throw new Error('Failed to fetch status breakdown');
-  }
-
-  return response.json();
-}
-
 export async function getTrends() {
   const response = await fetch(`${API_BASE}/analytics/trends`, {
     headers: getAuthHeaders()
@@ -44,3 +32,28 @@ export async function getTrends() {
   return response.json();
 }
 
+
+
+export async function getSkillGapAnalysis() {
+  const response = await fetch(`${API_BASE}/analytics/skill-gap`, {
+    headers: getAuthHeaders()
+  });
+
+  if (!response.ok) {
+    throw new Error('Failed to fetch skill gap analysis');
+  }
+
+  return response.json();
+}
+
+export async function getMatchInsights() {
+  const response = await fetch(`${API_BASE}/analytics/match-insights`, {
+    headers: getAuthHeaders()
+  });
+
+  if (!response.ok) {
+    throw new Error('Failed to fetch match insights');
+  }
+
+  return response.json();
+}

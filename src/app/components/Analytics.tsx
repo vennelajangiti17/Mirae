@@ -4,8 +4,9 @@ import { MoreVertical } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import {
   getAnalyticsOverview,
-  getStatusBreakdown,
   getTrends,
+  getSkillGapAnalysis,
+  getMatchInsights,
 } from '../services/analyticsService';
 
 type OverviewData = {
@@ -19,9 +20,15 @@ type OverviewData = {
   topSkills: { skill: string; count: number }[];
 };
 
-type StatusItem = {
-  status: string;
-  count: number;
+type SkillGapItem = {
+  skill: string;
+  frequency: number;
+};
+type MatchInsights = {
+  allJobsAverage: number;
+  interviewAverage: number;
+  rejectedJobs: { company: string; title: string; rejectionReason?: string }[];
+  offeredJobs: { company: string; title: string }[];
 };
 
 type TrendItem = {
@@ -31,21 +38,24 @@ type TrendItem = {
 
 export function Analytics() {
   const [overview, setOverview] = useState<OverviewData | null>(null);
-  const [statusBreakdown, setStatusBreakdown] = useState<StatusItem[]>([]);
+  const [skillGap, setSkillGap] = useState<SkillGapItem[]>([]);
+  const [matchInsights, setMatchInsights] = useState<MatchInsights | null>(null);
   const [trends, setTrends] = useState<TrendItem[]>([]);
 
   useEffect(() => {
     const loadAnalytics = async () => {
       try {
-        const [overviewData, statusData, trendsData] = await Promise.all([
+        const [overviewData, trendsData, skillGapData, matchInsightsData] = await Promise.all([
           getAnalyticsOverview(),
-          getStatusBreakdown(),
           getTrends(),
+          getSkillGapAnalysis(),
+          getMatchInsights(),
         ]);
 
         setOverview(overviewData);
-        setStatusBreakdown(statusData || []);
         setTrends(trendsData || []);
+        setSkillGap(skillGapData || []);
+        setMatchInsights(matchInsightsData || null);
       } catch (error) {
         console.error('Analytics fetch error:', error);
       }
@@ -69,7 +79,7 @@ export function Analytics() {
     ];
   }, [overview]);
 
-  const skillBars = useMemo(() => {
+  const topSkillBars = useMemo(() => {
     const topSkills = overview?.topSkills || [];
     const max = topSkills.length
       ? Math.max(...topSkills.map((item) => item.count))
@@ -81,6 +91,19 @@ export function Analytics() {
       max,
     }));
   }, [overview]);
+
+
+  const skillGapBars = useMemo(() => {
+    const max = skillGap.length
+      ? Math.max(...skillGap.map((item) => item.frequency))
+      : 1;
+
+    return skillGap.map((item) => ({
+      skill: item.skill,
+      frequency: item.frequency,
+      max,
+    }));
+  }, [skillGap]);
 
   const funnelSteps = useMemo(() => {
     const total = overview?.totalJobs ?? 0;
@@ -121,6 +144,38 @@ export function Analytics() {
     ];
   }, [overview]);
 
+
+  const summaryPills = useMemo(() => {
+    const totalJobs = overview?.totalJobs ?? 0;
+    const saved = overview?.saved ?? 0;
+    const applied = overview?.applied ?? 0;
+    const interviewing = overview?.interviewing ?? 0;
+    const offers = overview?.offers ?? 0;
+    const rejected = overview?.rejected ?? 0;
+
+    const formatPercent = (value: number) =>
+      totalJobs > 0 ? `${Math.round((value / totalJobs) * 100)}%` : '0%';
+
+    return {
+      saved:
+        saved > 0 ? `${formatPercent(saved)} of pipeline saved` : 'No saved jobs yet',
+      applied:
+        interviewing > 0
+          ? `${interviewing} in interview stage`
+          : applied > 0
+            ? 'Awaiting responses'
+            : 'No active applications',
+      rejected:
+        rejected > 0 ? `${formatPercent(rejected)} closed out` : 'No rejections yet',
+      offers:
+        offers > 0 ? `${formatPercent(offers)} reached offer` : 'No offers yet',
+    };
+  }, [overview]);
+
+
+  const rejectedJobs = matchInsights?.rejectedJobs || [];
+  const offeredJobs = matchInsights?.offeredJobs || [];
+
   return (
     <div className="ml-60 min-h-screen bg-[#E5E5E5] pb-6">
       <div className="bg-white border-b border-[#E5E5E5] px-8 py-5 sticky top-0 z-10">
@@ -153,7 +208,7 @@ export function Analytics() {
             </div>
             <div className="inline-flex items-center px-3 py-1.5 bg-[#DBEAFE] rounded-full">
               <span className="text-xs font-semibold text-[#1E40AF]">
-                Avg match {overview?.avgMatchScore ?? 0}%
+                {summaryPills.saved}
               </span>
             </div>
           </motion.div>
@@ -172,7 +227,7 @@ export function Analytics() {
             </div>
             <div className="inline-flex items-center px-3 py-1.5 bg-[#FEF3C7] rounded-full">
               <span className="text-xs font-semibold text-[#92400E]">
-                {overview?.interviewing ?? 0} interviewing
+                {summaryPills.applied}
               </span>
             </div>
           </motion.div>
@@ -191,7 +246,7 @@ export function Analytics() {
             </div>
             <div className="inline-flex items-center px-3 py-1.5 bg-[#FDE2E2] rounded-full">
               <span className="text-xs font-semibold text-[#B42318]">
-                {overview?.totalJobs ?? 0} total jobs
+                {summaryPills.rejected}
               </span>
             </div>
           </motion.div>
@@ -210,7 +265,7 @@ export function Analytics() {
             </div>
             <div className="inline-flex items-center px-3 py-1.5 bg-[#DDF7EA] rounded-full">
               <span className="text-xs font-semibold text-[#067647]">
-                {trends.length} tracked days
+                {summaryPills.offers}
               </span>
             </div>
           </motion.div>
@@ -254,47 +309,6 @@ export function Analytics() {
                     </div>
                   </div>
                 ))}
-              </div>
-            </motion.div>
-
-            <motion.div
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.3, delay: 0.3 }}
-              className="bg-white rounded-lg p-6 border border-[#E5E5E5] shadow-sm"
-            >
-              <div className="flex items-center justify-between mb-5">
-                <h3 className="text-lg font-bold text-[#000000]">
-                  Status Breakdown
-                </h3>
-                <span className="text-sm text-[#6b7280] font-medium">
-                  {overview?.totalJobs ?? 0} total
-                </span>
-              </div>
-
-              <div className="space-y-4">
-                {statusBreakdown.length === 0 ? (
-                  <p className="text-sm text-[#6b7280]">No status data yet.</p>
-                ) : (
-                  statusBreakdown.map((item, index) => (
-                    <motion.div
-                      key={item.status}
-                      initial={{ opacity: 0, x: -10 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ duration: 0.3, delay: 0.35 + index * 0.05 }}
-                      className="border-b border-[#E5E5E5] pb-4 last:border-0 last:pb-0"
-                    >
-                      <div className="flex items-start justify-between mb-2">
-                        <div className="font-bold text-base text-[#000000]">
-                          {item.status}
-                        </div>
-                        <span className="px-3 py-1 bg-[#E5E5E5] text-[#14213D] rounded-full text-xs font-semibold ml-3 flex-shrink-0">
-                          {item.count}
-                        </span>
-                      </div>
-                    </motion.div>
-                  ))
-                )}
               </div>
             </motion.div>
           </div>
@@ -362,58 +376,235 @@ export function Analytics() {
                 ))}
               </div>
             </motion.div>
-
-            <motion.div
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.3, delay: 0.3 }}
-              className="bg-white rounded-lg p-6 border border-[#E5E5E5] shadow-sm"
-            >
-              <h3 className="text-lg font-bold text-[#000000] mb-4">
-                Top Skills
-              </h3>
-
-              <div className="space-y-3">
-                {skillBars.length === 0 ? (
-                  <p className="text-sm text-[#6b7280]">No skill data yet.</p>
-                ) : (
-                  skillBars.map((skill, index) => {
-                    const widthPercent =
-                      skill.max > 0 ? (skill.count / skill.max) * 100 : 0;
-
-                    return (
-                      <div key={skill.skill}>
-                        <div className="flex items-center justify-between mb-2">
-                          <span className="text-sm font-medium text-[#14213D]">
-                            {skill.skill}
-                          </span>
-                          <span className="text-sm font-bold text-[#000000]">
-                            {skill.count}
-                          </span>
-                        </div>
-
-                        <div className="w-full h-2 bg-[#E5E5E5] rounded-full overflow-hidden">
-                          <motion.div
-                            initial={{ width: 0 }}
-                            animate={{ width: `${widthPercent}%` }}
-                            transition={{
-                              duration: 0.6,
-                              delay: 0.35 + index * 0.05,
-                            }}
-                            className="h-full rounded-full"
-                            style={{
-                              backgroundColor:
-                                index === 1 ? '#FCA311' : '#14213D',
-                            }}
-                          />
-                        </div>
-                      </div>
-                    );
-                  })
-                )}
-              </div>
-            </motion.div>
           </div>
+        </div>
+
+        <div className="mt-6 grid grid-cols-2 gap-6">
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3, delay: 0.3 }}
+            className="bg-white rounded-lg p-6 border border-[#E5E5E5] shadow-sm"
+          >
+            <h3 className="text-lg font-bold text-[#000000] mb-4">
+              Top Skills
+            </h3>
+
+            <div className="space-y-3">
+              {topSkillBars.length === 0 ? (
+                <p className="text-sm text-[#6b7280]">No skill data yet.</p>
+              ) : (
+                topSkillBars.map((skill, index) => {
+                  const widthPercent =
+                    skill.max > 0 ? (skill.count / skill.max) * 100 : 0;
+
+                  return (
+                    <div key={skill.skill}>
+                      <div className="mb-2 flex items-center justify-between">
+                        <span className="text-sm font-medium text-[#14213D]">
+                          {skill.skill}
+                        </span>
+                        <span className="text-sm font-bold text-[#000000]">
+                          {skill.count}
+                        </span>
+                      </div>
+
+                      <div className="h-2 w-full overflow-hidden rounded-full bg-[#E5E5E5]">
+                        <motion.div
+                          initial={{ width: 0 }}
+                          animate={{ width: `${widthPercent}%` }}
+                          transition={{
+                            duration: 0.6,
+                            delay: 0.35 + index * 0.05,
+                          }}
+                          className="h-full rounded-full"
+                          style={{
+                            backgroundColor: index === 1 ? '#FCA311' : '#14213D',
+                          }}
+                        />
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          </motion.div>
+
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3, delay: 0.3 }}
+            className="bg-white rounded-lg p-6 border border-[#E5E5E5] shadow-sm"
+          >
+            <h3 className="text-lg font-bold text-[#000000] mb-4">
+              Top Missing Skills
+            </h3>
+
+            <div className="space-y-3">
+              {skillGapBars.length === 0 ? (
+                <p className="text-sm text-[#6b7280]">No missing-skill data yet.</p>
+              ) : (
+                skillGapBars.map((skill, index) => {
+                  const widthPercent =
+                    skill.max > 0 ? (skill.frequency / skill.max) * 100 : 0;
+
+                  return (
+                    <div key={skill.skill}>
+                      <div className="mb-2 flex items-center justify-between">
+                        <span className="text-sm font-medium text-[#14213D]">
+                          {skill.skill}
+                        </span>
+                        <span className="text-sm font-bold text-[#000000]">
+                          {skill.frequency}
+                        </span>
+                      </div>
+
+                      <div className="h-2 w-full overflow-hidden rounded-full bg-[#FDE2E2]">
+                        <motion.div
+                          initial={{ width: 0 }}
+                          animate={{ width: `${widthPercent}%` }}
+                          transition={{
+                            duration: 0.6,
+                            delay: 0.35 + index * 0.05,
+                          }}
+                          className="h-full rounded-full"
+                          style={{
+                            backgroundColor: index === 0 ? '#B42318' : '#FCA311',
+                          }}
+                        />
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          </motion.div>
+        </div>
+
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3, delay: 0.35 }}
+          className="mt-6 bg-white rounded-lg p-6 border border-[#E5E5E5] shadow-sm"
+        >
+          <div className="flex items-center justify-between mb-5">
+            <h3 className="text-lg font-bold text-[#000000]">
+              AI Match Insights
+            </h3>
+            <span className="text-sm text-[#6b7280] font-medium">
+              Jobs only
+            </span>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div className="rounded-lg border border-[#E5E5E5] bg-[#F8FAFC] p-4">
+              <div className="text-xs font-semibold uppercase tracking-wide text-[#6b7280]">
+                Avg Match: All Jobs
+              </div>
+              <div className="mt-3 text-4xl font-bold text-[#14213D]">
+                {matchInsights?.allJobsAverage ?? 0}%
+              </div>
+              <p className="mt-2 text-sm text-[#6b7280]">
+                Average AI score across every scored job in your pipeline.
+              </p>
+            </div>
+
+            <div className="rounded-lg border border-[#E5E5E5] bg-[#FFF9F0] p-4">
+              <div className="text-xs font-semibold uppercase tracking-wide text-[#92400E]">
+                Avg Match: Interviewing / Offer
+              </div>
+              <div className="mt-3 text-4xl font-bold text-[#92400E]">
+                {matchInsights?.interviewAverage ?? 0}%
+              </div>
+              <p className="mt-2 text-sm text-[#8A5A14]">
+                Average AI score for the jobs that are progressing the furthest.
+              </p>
+            </div>
+          </div>
+        </motion.div>
+
+
+        <div className="mt-6 grid grid-cols-2 gap-6">
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3, delay: 0.4 }}
+            className="bg-white rounded-lg p-6 border border-[#E5E5E5] shadow-sm"
+          >
+            <div className="mb-5 flex items-center justify-between">
+              <h3 className="text-lg font-bold text-[#000000]">
+                Rejection Breakdown
+              </h3>
+              <span className="text-sm font-medium text-[#6b7280]">
+                {rejectedJobs.length} total
+              </span>
+            </div>
+
+            <div className="space-y-4">
+              {rejectedJobs.length === 0 ? (
+                <p className="text-sm text-[#6b7280]">No rejected jobs to review yet.</p>
+              ) : (
+                rejectedJobs.map((job, index) => (
+                  <div
+                    key={`${job.company}-${job.title}-${index}`}
+                    className="flex items-start justify-between gap-4 border-b border-[#F1F3F5] pb-4 last:border-b-0 last:pb-0"
+                  >
+                    <div className="min-w-0">
+                      <div className="font-bold text-[#000000]">{job.company}</div>
+                      <div className="text-sm text-[#6b7280]">{job.title}</div>
+                      <div className="mt-2 text-sm text-[#6b7280]">
+                        {job.rejectionReason || 'Not specified'}
+                      </div>
+                    </div>
+                    <span className="shrink-0 rounded-full bg-[#FDE2E2] px-3 py-1 text-xs font-semibold text-[#B42318]">
+                      Rejected
+                    </span>
+                  </div>
+                ))
+              )}
+            </div>
+          </motion.div>
+
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3, delay: 0.45 }}
+            className="bg-white rounded-lg p-6 border border-[#E5E5E5] shadow-sm"
+          >
+            <div className="mb-5 flex items-center justify-between">
+              <h3 className="text-lg font-bold text-[#000000]">
+                Offer Details
+              </h3>
+              <span className="text-sm font-medium text-[#6b7280]">
+                {offeredJobs.length} active offers
+              </span>
+            </div>
+
+            <div className="space-y-4">
+              {offeredJobs.length === 0 ? (
+                <p className="text-sm text-[#6b7280]">No active offers yet.</p>
+              ) : (
+                offeredJobs.map((job, index) => (
+                  <div
+                    key={`${job.company}-${job.title}-${index}`}
+                    className="flex items-start justify-between gap-4 border-b border-[#F1F3F5] pb-4 last:border-b-0 last:pb-0"
+                  >
+                    <div className="min-w-0">
+                      <div className="font-bold text-[#000000]">{job.company}</div>
+                      <div className="text-sm text-[#6b7280]">{job.title}</div>
+                    </div>
+                    <span className="shrink-0 rounded-full bg-[#DDF7EA] px-3 py-1 text-xs font-semibold text-[#067647]">
+                      Offer
+                    </span>
+                  </div>
+                ))
+              )}
+            </div>
+
+            <div className="mt-5 border-t border-[#F1F3F5] pt-4 text-sm text-[#6b7280]">
+              Interview → Offer rate: 25% • Avg. time: 3 weeks
+            </div>
+          </motion.div>
         </div>
       </div>
     </div>

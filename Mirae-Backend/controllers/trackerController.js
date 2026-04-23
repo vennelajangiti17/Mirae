@@ -383,6 +383,7 @@ ${rawText.substring(0, 6000)}`;
     const finalDeadline = parseDeadline(incomingData.deadline) || parseDeadline(aiResult.deadline);
 
     // 6. Build final document
+    const createdAt = new Date();
     const finalData = {
       title: finalTitle,
       company: finalCompany,
@@ -396,7 +397,10 @@ ${rawText.substring(0, 6000)}`;
       deadline: finalDeadline,
       category: finalCategory,
       status: 'Saved',
-      userId: req.user.id
+      history: [{ status: 'Saved', date: createdAt }],
+      userId: req.user.id,
+      createdAt,
+      updatedAt: createdAt
     };
 
     console.log("💾 Saving job:", {
@@ -464,25 +468,88 @@ exports.deleteJob = async (req, res) => {
 exports.updateJobStatus = async (req, res) => {
   try {
     const { status } = req.body;
-    
+
     if (!status) {
       return res.status(400).json({ error: 'Status is required' });
     }
 
-    const updatedJob = await Job.findOneAndUpdate(
-      { _id: req.params.id, userId: req.user.id },
-      { $set: { status } },
-      { new: true }
-    );
+    const job = await Job.findOne({ _id: req.params.id, userId: req.user.id });
 
-    if (!updatedJob) {
+    if (!job) {
       return res.status(404).json({ error: 'Job not found' });
     }
 
-    res.status(200).json({ message: 'Job status updated successfully', job: updatedJob });
+    if (job.status === status) {
+      return res.status(200).json({ message: 'Job status unchanged', job });
+    }
+
+    job.status = status;
+    job.history = Array.isArray(job.history) ? job.history : [];
+    job.history.push({ status, date: new Date() });
+    await job.save();
+
+    res.status(200).json({ message: 'Job status updated successfully', job });
   } catch (error) {
     console.error('Update Status Error:', error);
     res.status(500).json({ error: 'Failed to update job status' });
+  }
+};
+
+
+// Save networking contacts
+exports.updateJobContacts = async (req, res) => {
+  try {
+    const recruiterName = String(req.body?.recruiterName || '').trim();
+    const hiringManager = String(req.body?.hiringManager || '').trim();
+
+    const job = await Job.findOneAndUpdate(
+      { _id: req.params.id, userId: req.user.id },
+      {
+        $set: {
+          contacts: {
+            recruiterName,
+            hiringManager,
+          },
+        },
+      },
+      { new: true }
+    );
+
+    if (!job) {
+      return res.status(404).json({ error: 'Job not found' });
+    }
+
+    res.status(200).json({ message: 'Contacts saved successfully', job });
+  } catch (error) {
+    console.error('Update Contacts Error:', error);
+    res.status(500).json({ error: 'Failed to save contacts' });
+  }
+};
+
+
+// Save job notes
+exports.updateJobNotes = async (req, res) => {
+  try {
+    const notes = String(req.body?.notes || '');
+
+    const job = await Job.findOneAndUpdate(
+      { _id: req.params.id, userId: req.user.id },
+      {
+        $set: {
+          notes,
+        },
+      },
+      { new: true }
+    );
+
+    if (!job) {
+      return res.status(404).json({ error: 'Job not found' });
+    }
+
+    res.status(200).json({ message: 'Note saved successfully', job });
+  } catch (error) {
+    console.error('Update Notes Error:', error);
+    res.status(500).json({ error: 'Failed to save note' });
   }
 };
 

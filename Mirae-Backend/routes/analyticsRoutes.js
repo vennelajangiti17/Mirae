@@ -3,12 +3,14 @@ const router = express.Router();
 const { protect } = require('../middlewares/authMiddleware');
 const {
   getAnalyticsOverview,
-  getStatusBreakdown,
   getTrends,
+  getSkillGapAnalysis,
+  getMatchInsights,
 } = require('../controllers/analyticsController');
 
 router.get('/overview', protect, getAnalyticsOverview);
-router.get('/status-breakdown', protect, getStatusBreakdown);
 router.get('/trends', protect, getTrends);
+router.get('/skill-gap', protect, getSkillGapAnalysis);
+router.get('/match-insights', protect, getMatchInsights);
 
 module.exports = router;
