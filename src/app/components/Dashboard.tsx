@@ -19,6 +19,7 @@ interface Application {
   description: string;
   location: string;
   postedDate: string;
+  salaryRange: string;
   skills: {
     all: string[];
     matched: string[];
@@ -76,6 +77,7 @@ const mapJobToApplication = (job: any): Application => ({
   description: job.description || 'No job description provided.',
   location: job.location || 'Unknown Location',
   postedDate: job.postedDate || 'Unknown Date',
+  salaryRange: job.salaryRange || '',
   skills: {
     all: job.skills?.all || [],
     matched: job.skills?.matched || job.matchedSkills || [],
