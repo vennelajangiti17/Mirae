@@ -32,8 +32,16 @@ interface Props {
 export function ApplicationDetail({ application, onClose, onStatusChange }: Props) {
   const [activeTab, setActiveTab] = useState('overview');
   const [status, setStatus] = useState(application.stage || 'Saved');
+  
+  // New State Variables for AI & Networking
+  const [recruiterName, setRecruiterName] = useState('');
+  const [hiringManager, setHiringManager] = useState('');
+  const [scratchpadText, setScratchpadText] = useState('');
+  const [bulletPoint, setBulletPoint] = useState('');
+  const [isDraftingMessage, setIsDraftingMessage] = useState(false);
+  const [isTailoring, setIsTailoring] = useState(false);
 
-  const tabs = ['Overview', 'Timeline & Prep', 'Notes', 'Documents'];
+  const tabs = ['Overview', 'Timeline & Prep', 'Networking', 'Notes', 'Documents'];
 
   const { skills, description = 'No description available.', location, postedDate, salaryRange, matchScore } = application;
   const { all = [], matched = [], missing = {} as any } = skills || {};
@@ -44,6 +52,66 @@ export function ApplicationDetail({ application, onClose, onStatusChange }: Prop
     setStatus(newStatus);
     if (onStatusChange) {
       onStatusChange(application.id, newStatus);
+    }
+  };
+
+  // AI Handler: Draft Cold Message
+  const handleDraftColdMessage = async () => {
+    setIsDraftingMessage(true);
+    try {
+      const response = await fetch('http://localhost:5000/api/tracker/ai/cold-message', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        },
+        body: JSON.stringify({
+          companyName: application.company,
+          jobTitle: application.role,
+          recruiterName
+        })
+      });
+
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error);
+      
+      setScratchpadText(prev => prev + (prev ? '\n\n' : '') + "--- Drafted Message ---\n" + data.message);
+      setActiveTab('notes'); // Switch to notes to see the drafted message
+      alert('Message drafted successfully and added to your Scratchpad!');
+    } catch (error) {
+      console.error(error);
+      alert('Failed to draft message.');
+    } finally {
+      setIsDraftingMessage(false);
+    }
+  };
+
+  // AI Handler: Tailor Bullet Point
+  const handleTailorBullet = async () => {
+    if (!bulletPoint.trim()) return alert("Please enter a bullet point to tailor.");
+    setIsTailoring(true);
+    try {
+      const response = await fetch('http://localhost:5000/api/tracker/ai/tailor-bullet', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        },
+        body: JSON.stringify({
+          jobDescription: description,
+          originalBullet: bulletPoint
+        })
+      });
+
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error);
+      
+      setBulletPoint(data.bullet);
+    } catch (error) {
+      console.error(error);
+      alert('Failed to tailor bullet.');
+    } finally {
+      setIsTailoring(false);
     }
   };
 
@@ -299,17 +367,11 @@ export function ApplicationDetail({ application, onClose, onStatusChange }: Prop
                   <label className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer"><input type="checkbox" className="w-4 h-4 accent-[#FCA311]" /> Submit Application</label>
                 </div>
               </div>
-
-              <h3 className="text-lg font-bold text-[#000000] mb-4">Interview Prep</h3>
-              <button className="w-full py-4 border-2 border-dashed border-[#FCA311] rounded-lg text-[#FCA311] font-bold hover:bg-[#FCA311]/10 transition-colors flex items-center justify-center gap-2">
-                <PlusCircle className="w-5 h-5" />
-                Custom Mock Interview
-              </button>
             </motion.div>
           )}
 
-          {/* Notes */}
-          {activeTab === 'notes' && (
+          {/* Networking */}
+          {activeTab === 'networking' && (
             <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="h-full flex flex-col">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-lg font-bold text-[#000000]">Networking CRM</h3>
@@ -321,22 +383,45 @@ export function ApplicationDetail({ application, onClose, onStatusChange }: Prop
               <div className="grid grid-cols-2 gap-4 mb-6">
                 <div>
                   <label className="block text-xs font-semibold text-gray-500 mb-1">Recruiter Name</label>
-                  <input type="text" className="w-full border border-gray-300 rounded p-2 text-sm focus:outline-none focus:ring-1 focus:ring-[#FCA311]" placeholder="Jane Doe" />
+                  <input 
+                    type="text" 
+                    value={recruiterName}
+                    onChange={(e) => setRecruiterName(e.target.value)}
+                    className="w-full border border-gray-300 rounded p-2 text-sm focus:outline-none focus:ring-1 focus:ring-[#FCA311]" 
+                    placeholder="Jane Doe" 
+                  />
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-gray-500 mb-1">Hiring Manager</label>
-                  <input type="text" className="w-full border border-gray-300 rounded p-2 text-sm focus:outline-none focus:ring-1 focus:ring-[#FCA311]" placeholder="John Smith" />
+                  <input 
+                    type="text" 
+                    value={hiringManager}
+                    onChange={(e) => setHiringManager(e.target.value)}
+                    className="w-full border border-gray-300 rounded p-2 text-sm focus:outline-none focus:ring-1 focus:ring-[#FCA311]" 
+                    placeholder="John Smith" 
+                  />
                 </div>
               </div>
 
               <div className="mb-4">
-                <button className="w-full py-2 bg-[#FCA311]/20 text-[#FCA311] font-bold rounded-lg hover:bg-[#FCA311]/30 transition-colors text-sm">
-                  ✨ Draft Smart Cold Message
+                <button 
+                  onClick={handleDraftColdMessage}
+                  disabled={isDraftingMessage}
+                  className="w-full py-2 bg-[#FCA311]/20 text-[#FCA311] font-bold rounded-lg hover:bg-[#FCA311]/30 transition-colors text-sm disabled:opacity-50"
+                >
+                  {isDraftingMessage ? '✨ Drafting...' : '✨ Draft Smart Cold Message'}
                 </button>
               </div>
+            </motion.div>
+          )}
 
+          {/* Notes */}
+          {activeTab === 'notes' && (
+            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="h-full flex flex-col">
               <h3 className="text-lg font-bold text-[#000000] mb-2 mt-4">Rich Text Scratchpad</h3>
               <textarea 
+                value={scratchpadText}
+                onChange={(e) => setScratchpadText(e.target.value)}
                 className="flex-1 w-full border border-gray-300 rounded-lg p-4 resize-none focus:outline-none focus:ring-2 focus:ring-[#FCA311] focus:border-transparent text-sm"
                 placeholder="Write down any details, contacts, or thoughts about this application..."
               />
@@ -374,11 +459,17 @@ export function ApplicationDetail({ application, onClose, onStatusChange }: Prop
                 <h3 className="text-lg font-bold text-[#000000] mb-3">✨ Resume Bullet Tailorer</h3>
                 <p className="text-xs text-gray-500 mb-2">Paste a generic bullet point, and Groq will rewrite it to include keywords from the job description.</p>
                 <textarea 
+                  value={bulletPoint}
+                  onChange={(e) => setBulletPoint(e.target.value)}
                   className="w-full border border-gray-300 rounded-lg p-3 resize-none focus:outline-none focus:ring-1 focus:ring-[#FCA311] text-sm h-24 mb-2"
                   placeholder="e.g., Built a web app using React and Node.js..."
                 />
-                <button className="w-full py-2 bg-[#14213D] text-white font-bold rounded-lg hover:bg-[#0B132B] transition-colors text-sm">
-                  Tailor Bullet Point
+                <button 
+                  onClick={handleTailorBullet}
+                  disabled={isTailoring}
+                  className="w-full py-2 bg-[#14213D] text-white font-bold rounded-lg hover:bg-[#0B132B] transition-colors text-sm disabled:opacity-50"
+                >
+                  {isTailoring ? 'Tailoring...' : 'Tailor Bullet Point'}
                 </button>
               </div>
             </motion.div>
