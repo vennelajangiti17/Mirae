@@ -4,6 +4,106 @@ const Groq = require('groq-sdk');
 
 const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
 
+const SKILL_LIBRARY = [
+  { label: 'JavaScript', terms: ['javascript', 'js'] },
+  { label: 'TypeScript', terms: ['typescript', 'ts'] },
+  { label: 'Python', terms: ['python'] },
+  { label: 'Java', terms: ['java'] },
+  { label: 'C++', terms: ['c++'] },
+  { label: 'C#', terms: ['c#', 'c sharp'] },
+  { label: 'Go', terms: ['golang', ' go '] },
+  { label: 'Rust', terms: ['rust'] },
+  { label: 'SQL', terms: ['sql', 'mysql', 'postgresql', 'postgres'] },
+  { label: 'React', terms: ['react', 'react.js'] },
+  { label: 'Node.js', terms: ['node.js', 'nodejs', 'node js'] },
+  { label: 'Express.js', terms: ['express', 'express.js'] },
+  { label: 'MongoDB', terms: ['mongodb', 'mongo db'] },
+  { label: 'Docker', terms: ['docker'] },
+  { label: 'Kubernetes', terms: ['kubernetes', 'k8s'] },
+  { label: 'AWS', terms: ['aws', 'amazon web services'] },
+  { label: 'Google Cloud', terms: ['google cloud', 'gcp'] },
+  { label: 'Azure', terms: ['azure', 'microsoft azure'] },
+  { label: 'Git', terms: ['git', 'github', 'gitlab'] },
+  { label: 'Linux', terms: ['linux'] },
+  { label: 'REST APIs', terms: ['rest api', 'restful api', 'rest apis'] },
+  { label: 'GraphQL', terms: ['graphql'] },
+  { label: 'System Design', terms: ['system design'] },
+  { label: 'Distributed Systems', terms: ['distributed systems', 'distributed system'] },
+  { label: 'Data Structures', terms: ['data structures'] },
+  { label: 'Algorithms', terms: ['algorithms', 'algorithmic'] },
+  { label: 'Software Development', terms: ['software development', 'software engineering'] },
+  { label: 'Programming Languages', terms: ['programming languages', 'programming language'] },
+  { label: 'Machine Learning', terms: ['machine learning', 'ml'] },
+  { label: 'Data Science', terms: ['data science'] },
+  { label: 'Artificial Intelligence', terms: ['artificial intelligence', 'ai '] },
+  { label: 'Problem Solving', terms: ['problem solving', 'problem-solving'] },
+  { label: 'Communication', terms: ['communication skills', 'communication'] },
+  { label: 'Leadership', terms: ['leadership'] },
+  { label: 'Mentoring', terms: ['mentor', 'mentoring'] },
+  { label: 'Stakeholder Management', terms: ['stakeholder management', 'stakeholder'] },
+  { label: 'Partnerships', terms: ['partnerships', 'partnership'] },
+  { label: 'Program Management', terms: ['program management'] },
+  { label: 'Project Management', terms: ['project management'] },
+  { label: 'Product Management', terms: ['product management'] },
+  { label: 'Testing', terms: ['testing', 'unit testing', 'integration testing'] },
+  { label: 'Debugging', terms: ['debugging', 'debug'] },
+];
+
+const uniq = (items) => [...new Set(items.filter(Boolean))];
+
+const extractSkillsFromText = (text = '') => {
+  const haystack = ` ${String(text || '').toLowerCase()} `;
+  return SKILL_LIBRARY
+    .filter((entry) => entry.terms.some((term) => haystack.includes(` ${term.toLowerCase()} `) || haystack.includes(term.toLowerCase())))
+    .map((entry) => entry.label);
+};
+
+const splitSkillsFromText = (value = '') => {
+  return uniq(
+    String(value || '')
+      .split(/[\n,•|/]+/)
+      .map((item) => item.trim())
+      .filter(Boolean)
+  );
+};
+
+const deriveSkillBuckets = ({ aiSkills, rawText, description, resumeText, hasResume }) => {
+  const required = uniq([
+    ...aiSkills.all,
+    ...extractSkillsFromText(rawText),
+    ...extractSkillsFromText(description),
+  ]);
+
+  const normalizedResume = ` ${String(resumeText || '').toLowerCase()} `;
+
+  const matched = hasResume
+    ? required.filter((skill) => {
+        const libraryMatch = SKILL_LIBRARY.find((entry) => entry.label === skill);
+        if (!libraryMatch) return normalizedResume.includes(skill.toLowerCase());
+        return libraryMatch.terms.some((term) => normalizedResume.includes(` ${term.toLowerCase()} `) || normalizedResume.includes(term.toLowerCase()));
+      })
+    : [];
+
+  const aiMatched = aiSkills.matched.filter((skill) => required.includes(skill));
+  const finalMatched = uniq(hasResume ? [...matched, ...aiMatched] : []);
+  const finalMissing = hasResume
+    ? required.filter((skill) => !finalMatched.includes(skill))
+    : required;
+
+  return {
+    all: required,
+    matched: finalMatched,
+    missing: uniq([...aiSkills.missing.filter((skill) => required.includes(skill)), ...finalMissing]),
+  };
+};
+
+const deriveMatchScore = (providedScore, skills, hasResume) => {
+  if (!hasResume) return null;
+  if (typeof providedScore === 'number' && !Number.isNaN(providedScore)) return providedScore;
+  if (!skills.all.length) return null;
+  return Math.max(0, Math.min(100, Math.round((skills.matched.length / skills.all.length) * 100)));
+};
+
 // Helper: Normalize category into the dashboard's 3 buckets
 const normalizeCategory = (raw, context = '') => {
   const rawValue = String(raw || '').toLowerCase().trim();
@@ -129,7 +229,7 @@ Your job is to find the job details and return a strict JSON object.
 
 If you cannot find a specific detail, use "Not specified" or "Unknown". Only classify into Jobs, Hackathons, or Others. Anything that is not a job posting and not a hackathon/contest must be Others.
 
-CRITICAL INSTRUCTION: I will also provide the candidate's current skills. You must compare the job's required skills against the candidate's skills to calculate a Match Score (0-100). Furthermore, you must categorize the job's required skills into "matched" (skills the candidate has) and "missing" (skills the candidate lacks).
+CRITICAL INSTRUCTION: I will also provide the candidate's current skills. You must compare the job's required skills against the candidate's skills to calculate a Match Score (0-100). Furthermore, you must categorize the job's required skills into "matched" (skills the candidate has) and "missing" (skills the candidate lacks). Never leave the skills arrays empty if the posting mentions technologies, tools, or competencies. Infer a concise required-skills list from the posting text when needed.
 
 Candidate's Current Skills: ${userProfileSkills}
 
@@ -218,28 +318,38 @@ ${rawText.substring(0, 6000)}`;
 
     if (aiResult.skills) {
       if (Array.isArray(aiResult.skills)) {
-        // Groq hallucinated a flat array instead of an object
         safeSkills.all = ensureArray(aiResult.skills);
-        safeSkills.missing = ensureArray(aiResult.skills); // Assume missing if not categorized
+        safeSkills.matched = [];
+        safeSkills.missing = ensureArray(aiResult.skills);
       } else {
-        safeSkills.all = ensureArray(aiResult.skills.all);
+        safeSkills.all = uniq([
+          ...ensureArray(aiResult.skills.all),
+          ...splitSkillsFromText(aiResult.skills.required),
+        ]);
         safeSkills.matched = ensureArray(aiResult.skills.matched);
         safeSkills.missing = ensureArray(aiResult.skills.missing);
       }
     }
 
-    // Safely parse matchScore (in case Groq returns "85%" or similar)
+    safeSkills = deriveSkillBuckets({
+      aiSkills: safeSkills,
+      rawText: rawText.substring(0, 6000),
+      description: aiResult.description || '',
+      resumeText: user.resumeText || '',
+      hasResume,
+    });
+
     let safeMatchScore = null;
     if (aiResult.matchScore !== undefined && aiResult.matchScore !== null) {
       const parsed = parseInt(String(aiResult.matchScore).replace(/[^0-9]/g, ''), 10);
       if (!isNaN(parsed)) safeMatchScore = parsed;
     }
-    
-    // Enforce null match score if no resume
+
+    safeMatchScore = deriveMatchScore(safeMatchScore, safeSkills, hasResume);
+
     if (!hasResume) {
-      safeMatchScore = null;
       safeSkills.matched = [];
-      safeSkills.missing = safeSkills.all; // If no resume, all required skills are technically "missing"
+      safeSkills.missing = safeSkills.all;
     }
 
     // Clean up description if it's too long or just raw text
@@ -280,6 +390,8 @@ ${rawText.substring(0, 6000)}`;
       company: finalData.company,
       matchScore: finalData.matchScore,
       skillsCount: finalData.skills?.all?.length,
+      matchedCount: finalData.skills?.matched?.length,
+      missingCount: finalData.skills?.missing?.length,
       category: finalData.category,
       deadline: finalData.deadline
     });

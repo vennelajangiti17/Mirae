@@ -1,4 +1,4 @@
-import { X, MapPin, Calendar, FileText, File, Clock, PlusCircle } from 'lucide-react';
+import { X, MapPin, Calendar, FileText, File, Clock, Search, BarChart3 } from 'lucide-react';
 import { motion } from 'motion/react';
 import { useState } from 'react';
 
@@ -14,6 +14,7 @@ interface Application {
   url: string;
   location: string;
   postedDate: string;
+  deadline?: string;
   salaryRange: string;
   description: string;
   skills: {
@@ -43,9 +44,17 @@ export function ApplicationDetail({ application, onClose, onStatusChange }: Prop
 
   const tabs = ['Overview', 'Timeline & Prep', 'Networking', 'Notes', 'Documents'];
 
-  const { skills, description = 'No description available.', location, postedDate, salaryRange, matchScore } = application;
+  const { skills, description = 'No description available.', location, postedDate, deadline, salaryRange, matchScore } = application;
   const { all = [], matched = [], missing = {} as any } = skills || {};
   const missingArray = Array.isArray(missing) ? missing : [];
+  const normalizedPostedDate = postedDate && !/not specified|unknown/i.test(postedDate) ? postedDate : '';
+  const displayDeadline = deadline
+    ? new Date(deadline).toString() !== 'Invalid Date'
+      ? new Date(deadline).toLocaleDateString()
+      : deadline
+    : 'Not provided';
+  const displaySalary = salaryRange && !/not specified|unknown/i.test(salaryRange) ? salaryRange : '';
+
 
   const handleStatusChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const newStatus = e.target.value;
@@ -115,25 +124,11 @@ export function ApplicationDetail({ application, onClose, onStatusChange }: Prop
     }
   };
 
-  const handleDownloadWayback = () => {
-    const element = document.createElement("a");
-    const file = new Blob([`Title: ${application.role}\nCompany: ${application.company}\nURL: ${application.url}\n\nDescription:\n${description}`], {type: 'text/plain'});
-    element.href = URL.createObjectURL(file);
-    element.download = `${application.company}_${application.role.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_archived.txt`;
-    document.body.appendChild(element);
-    element.click();
-    document.body.removeChild(element);
-  };
 
-  const toxicPhrases = ["wear many hats", "fast-paced family", "work hard play hard", "rockstar", "ninja", "hit the ground running", "self-starter"];
-  const renderDescriptionWithRedFlags = (desc: string) => {
-    let highlightedDesc = desc;
-    toxicPhrases.forEach(phrase => {
-      const regex = new RegExp(`(${phrase})`, "gi");
-      highlightedDesc = highlightedDesc.replace(regex, '<span class="bg-red-100 text-red-800 font-bold px-1 rounded" title="Potential Red Flag: Toxic Culture indicator">$1</span>');
-    });
-    return <div dangerouslySetInnerHTML={{ __html: highlightedDesc }} />;
-  };
+
+
+  const hasSkillAnalysis = all.length > 0 || matched.length > 0 || missingArray.length > 0;
+  const hasResumeBackedScore = matchScore !== null && matchScore !== undefined;
 
   return (
     <>
@@ -162,35 +157,48 @@ export function ApplicationDetail({ application, onClose, onStatusChange }: Prop
                 {application.role}
               </h2>
               <div className="flex items-center gap-3">
-                <p className="text-[#E5E5E5] text-lg flex items-center gap-2">
-                  {application.company}
-                  {/* Quick-Search Links */}
-                  <a href={`https://www.glassdoor.com/Search/results.htm?keyword=${encodeURIComponent(application.company)}`} target="_blank" rel="noreferrer" className="text-gray-400 hover:text-[#FCA311] transition-colors" title="Search Salaries on Glassdoor">
-                    <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor"><path d="M16.5 0h-9v24h9V0zm-7 2h5v20h-5V2z"/></svg>
+                <p className="text-[#E5E5E5] text-lg">{application.company}</p>
+                <div className="flex items-center gap-2">
+                  <a
+                    href={`https://www.glassdoor.com/Search/results.htm?keyword=${encodeURIComponent(application.company)}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex items-center justify-center rounded-md bg-white/10 p-2 text-white/80 transition-colors hover:bg-white/20 hover:text-[#FCA311]"
+                    title="Search company insights on Glassdoor"
+                  >
+                    <Search className="h-4 w-4" />
                   </a>
-                  <a href={`https://www.levels.fyi/companies/${application.company.toLowerCase().replace(/[^a-z0-9]/g, '')}/salaries`} target="_blank" rel="noreferrer" className="text-gray-400 hover:text-[#FCA311] transition-colors" title="Search on Levels.fyi">
-                    <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor"><path d="M2 2h20v20H2z"/></svg>
+                  <a
+                    href={`https://www.levels.fyi/companies/${application.company.toLowerCase().replace(/[^a-z0-9]/g, '')}/salaries`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex items-center justify-center rounded-md bg-white/10 p-2 text-white/80 transition-colors hover:bg-white/20 hover:text-[#FCA311]"
+                    title="Search salary data on Levels.fyi"
+                  >
+                    <BarChart3 className="h-4 w-4" />
                   </a>
-                </p>
-                {/* Wayback Archiver */}
-                <button onClick={handleDownloadWayback} className="text-xs bg-white/10 hover:bg-white/20 text-white px-2 py-1 rounded ml-2 transition-colors flex items-center gap-1" title="Download raw job description">
-                  <FileText className="w-3 h-3" /> Save Archive
-                </button>
+                </div>
               </div>
               
               {/* 3. Header Details (Dynamic Data) */}
-              <div className="flex items-center gap-4 mt-3 text-sm text-gray-300">
+              <div className="flex flex-wrap items-center gap-4 mt-3 text-sm text-gray-300">
                 <div className="flex items-center gap-1">
                   <MapPin className="w-4 h-4" />
-                  <span>{location || 'Location Not specified'}</span>
+                  <span>{location || 'Location not provided'}</span>
                 </div>
+                {normalizedPostedDate && (
+                  <div className="flex items-center gap-1">
+                    <Clock className="w-4 h-4" />
+                    <span>Posted: {normalizedPostedDate}</span>
+                  </div>
+                )}
                 <div className="flex items-center gap-1">
                   <Calendar className="w-4 h-4" />
-                  <span>{postedDate || 'Date Not specified'}</span>
+                  <span>Deadline: {displayDeadline}</span>
                 </div>
-                {salaryRange && (
+                {displaySalary && (
                   <div className="flex items-center gap-1 bg-[#FCA311]/20 text-[#FCA311] px-2 py-0.5 rounded font-medium">
-                    <span>{salaryRange}</span>
+                    <span>{displaySalary}</span>
                   </div>
                 )}
               </div>
@@ -251,69 +259,73 @@ export function ApplicationDetail({ application, onClose, onStatusChange }: Prop
               <div className="flex items-center justify-between mb-8">
                 <div className="flex-1 mr-8">
                   <h3 className="text-lg font-bold text-[#000000] mb-3">AI Skill Gap Analysis</h3>
-                  
-                  {/* Matched Skills */}
-                  <div className="mb-4">
-                    <p className="text-sm font-semibold text-gray-600 mb-2">Matched Skills</p>
-                    <div className="flex flex-wrap gap-2">
-                      {matched.length > 0 ? (
-                        matched.map((skill, i) => (
-                          <span key={i} className="px-3 py-1.5 bg-[#14213D] text-white rounded-full text-xs font-medium">
-                            {skill}
-                          </span>
-                        ))
-                      ) : (
-                        <span className="text-sm text-gray-400 italic">No matched skills found.</span>
-                      )}
-                    </div>
-                  </div>
 
-                  {/* Missing Skills */}
-                  <div className="mb-4">
-                    <div className="flex items-center justify-between mb-2">
-                      <p className="text-sm font-semibold text-gray-600">Missing Skills</p>
-                      {missingArray.length > 0 && (
-                        <button className="text-xs text-[#FCA311] hover:underline font-medium">✨ Generate Pivot Script</button>
-                      )}
+                  {hasSkillAnalysis ? (
+                    <>
+                      <div className="mb-4">
+                        <p className="text-sm font-semibold text-gray-600 mb-2">Matched Skills</p>
+                        <div className="flex flex-wrap gap-2">
+                          {matched.length > 0 ? (
+                            matched.map((skill, i) => (
+                              <span key={i} className="px-3 py-1.5 bg-[#14213D] text-white rounded-full text-xs font-medium">
+                                {skill}
+                              </span>
+                            ))
+                          ) : (
+                            <span className="text-sm text-gray-400 italic">No matched skills were identified.</span>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="mb-4">
+                        <p className="text-sm font-semibold text-gray-600 mb-2">Missing Skills</p>
+                        <div className="flex flex-wrap gap-2">
+                          {missingArray.length > 0 ? (
+                            missingArray.map((skill: string, i: number) => (
+                              <span key={i} className="px-3 py-1.5 bg-red-100 text-red-700 rounded-full text-xs font-medium border border-red-200">
+                                {skill}
+                              </span>
+                            ))
+                          ) : (
+                            <span className="text-sm text-gray-400 italic">No missing skills were identified.</span>
+                          )}
+                        </div>
+                      </div>
+
+                      <div>
+                        <p className="text-sm font-semibold text-gray-600 mb-2">All Required</p>
+                        <div className="flex flex-wrap gap-2">
+                          {all.length > 0 ? (
+                            all.map((skill, i) => (
+                              <span key={i} className="px-2 py-1 bg-gray-100 text-gray-600 rounded text-xs">
+                                {skill}
+                              </span>
+                            ))
+                          ) : (
+                            <span className="text-sm text-gray-400 italic">No skills were extracted for this posting.</span>
+                          )}
+                        </div>
+                      </div>
+                    </>
+                  ) : (
+                    <div className="rounded-lg border border-[#E5E5E5] bg-gray-50 p-4 text-sm text-gray-600">
+                      <p className="font-semibold text-[#14213D] mb-1">Detailed skill gap analysis is not available for this role yet.</p>
+                      <p>
+                        {hasResumeBackedScore
+                          ? 'Mirae calculated a partial match score, but this job did not return a structured skills breakdown.'
+                          : 'Upload your resume and re-save this job to generate matched and missing skills.'}
+                      </p>
                     </div>
-                    <div className="flex flex-wrap gap-2">
-                      {missingArray.length > 0 ? (
-                        missingArray.map((skill: string, i: number) => (
-                          <span key={i} className="px-3 py-1.5 bg-red-100 text-red-700 rounded-full text-xs font-medium border border-red-200">
-                            {skill}
-                          </span>
-                        ))
-                      ) : (
-                        <span className="text-sm text-gray-400 italic">No missing skills found!</span>
-                      )}
-                    </div>
-                  </div>
-                  
-                  {/* All Required Skills */}
-                  <div>
-                    <p className="text-sm font-semibold text-gray-600 mb-2">All Required</p>
-                    <div className="flex flex-wrap gap-2">
-                      {all.length > 0 ? (
-                        all.map((skill, i) => (
-                          <span key={i} className="px-2 py-1 bg-gray-100 text-gray-600 rounded text-xs">
-                            {skill}
-                          </span>
-                        ))
-                      ) : (
-                        <span className="text-sm text-gray-400 italic">No skills specified.</span>
-                      )}
-                    </div>
-                  </div>
+                  )}
                 </div>
 
-                {/* Circular Match Score */}
                 <div className="relative w-32 h-32 flex-shrink-0">
                   <svg className="w-full h-full transform -rotate-90">
                     <circle cx="64" cy="64" r="56" stroke="#f3f4f6" strokeWidth="12" fill="none" />
                     <circle
                       cx="64" cy="64" r="56" stroke="#FCA311" strokeWidth="12" fill="none"
                       strokeDasharray={`${2 * Math.PI * 56}`}
-                      strokeDashoffset={`${2 * Math.PI * 56 * (1 - (matchScore ?? 0) / 100)}`}
+                      strokeDashoffset={`${2 * Math.PI * 56 * (1 - ((matchScore ?? 0) / 100))}`}
                       className="transition-all duration-1000 ease-out"
                     />
                   </svg>
@@ -324,16 +336,12 @@ export function ApplicationDetail({ application, onClose, onStatusChange }: Prop
                 </div>
               </div>
 
-              {/* Job Description Box */}
               <div>
                 <div className="flex items-center justify-between mb-3">
                   <h3 className="text-lg font-bold text-[#000000]">Description</h3>
-                  <span className="text-xs bg-red-100 text-red-800 px-2 py-1 rounded font-medium border border-red-200">
-                    🚩 Red Flags Detected
-                  </span>
                 </div>
                 <div className="bg-gray-50 border border-gray-200 rounded-lg p-5 text-gray-700 leading-relaxed text-sm whitespace-pre-wrap">
-                  {renderDescriptionWithRedFlags(description)}
+                  {description}
                 </div>
               </div>
             </motion.div>

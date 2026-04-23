@@ -20,8 +20,8 @@ export async function getDashboardSummary() {
   return response.json();
 }
 
-export async function getRecentJobs() {
-  const response = await fetch(`${API_BASE}/dashboard/recent`, {
+export async function getRecentJobs(sortBy: 'newest' | 'matchScore' = 'newest') {
+  const response = await fetch(`${API_BASE}/dashboard/recent?sortBy=${sortBy}`, {
     headers: getAuthHeaders(),
   });
 

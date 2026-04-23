@@ -49,4 +49,6 @@ const jobSchema = new mongoose.Schema({
   timestamps: true 
 });
 
+jobSchema.index({ userId: 1, status: 1, matchScore: -1 });
+
 module.exports = mongoose.model('Job', jobSchema);

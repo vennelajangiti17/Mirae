@@ -48,6 +48,11 @@ const scrapeAndSendToMirae = () => {
 
 // 👂 Listen for the trigger from either the Popup or the Right-Click Menu
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+  if (request.action === 'pingMiraeContentScript') {
+    sendResponse({ status: 'ready' });
+    return false;
+  }
+
   if (request.action === "triggerScrape") {
     scrapeAndSendToMirae();
     sendResponse({ status: "scraping_started" });

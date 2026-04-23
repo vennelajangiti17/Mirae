@@ -1,8 +1,35 @@
+const fs = require('fs');
+const path = require('path');
+const pdfParse = require('pdf-parse');
 const User = require('../models/User');
 const Job = require('../models/Job');
 const bcrypt = require('bcrypt');
+const { resumeUploadDir } = require('../middlewares/uploadMiddleware');
 
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+const deleteFileIfExists = async (targetPath) => {
+  if (!targetPath) return;
+  try {
+    await fs.promises.unlink(targetPath);
+  } catch (error) {
+    if (error.code !== 'ENOENT') {
+      console.error('File delete error:', error);
+    }
+  }
+};
+
+const extractResumeText = async (file) => {
+  const extension = path.extname(file.originalname || '').toLowerCase();
+
+  if (extension === '.pdf' || file.mimetype === 'application/pdf') {
+    const buffer = await fs.promises.readFile(file.path);
+    const parsed = await pdfParse(buffer);
+    return (parsed.text || '').trim();
+  }
+
+  return (await fs.promises.readFile(file.path, 'utf8')).trim();
+};
 
 // Get the logged-in user's profile data
 exports.getProfile = async (req, res) => {
@@ -138,6 +165,85 @@ exports.updateResume = async (req, res) => {
   } catch (error) {
     console.error("Resume Update Error:", error);
     res.status(500).json({ error: "Internal Server Error" });
+  }
+};
+
+
+exports.uploadResume = async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: 'No resume file uploaded' });
+    }
+
+    const resumeText = await extractResumeText(req.file);
+
+    if (!resumeText || resumeText.length < 20) {
+      await deleteFileIfExists(req.file.path);
+      return res.status(400).json({ error: 'Could not extract enough text from the uploaded resume' });
+    }
+
+    const existingUser = await User.findById(req.user.id).select('resumeFileName');
+    if (!existingUser) {
+      await deleteFileIfExists(req.file.path);
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    const previousFileName = existingUser.resumeFileName;
+
+    const updatedUser = await User.findByIdAndUpdate(
+      req.user.id,
+      {
+        resumeText,
+        resumeFileName: req.file.filename,
+        resumeUploadedAt: new Date(),
+      },
+      { new: true }
+    ).select('-password');
+
+    if (previousFileName && previousFileName !== req.file.filename) {
+      await deleteFileIfExists(path.join(resumeUploadDir, previousFileName));
+    }
+
+    return res.status(200).json({
+      message: 'Resume uploaded successfully',
+      user: updatedUser,
+      stats: {
+        fileName: req.file.originalname,
+        storedFileName: req.file.filename,
+        uploadedAt: updatedUser.resumeUploadedAt,
+        charCount: resumeText.length,
+      }
+    });
+  } catch (error) {
+    if (req.file?.path) {
+      await deleteFileIfExists(req.file.path);
+    }
+    console.error('Resume Upload Error:', error);
+    return res.status(500).json({ error: 'Failed to upload resume' });
+  }
+};
+
+exports.deleteResume = async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id);
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    const previousFileName = user.resumeFileName;
+    user.resumeText = '';
+    user.resumeFileName = '';
+    user.resumeUploadedAt = null;
+    await user.save();
+
+    if (previousFileName) {
+      await deleteFileIfExists(path.join(resumeUploadDir, previousFileName));
+    }
+
+    return res.status(200).json({ message: 'Resume deleted successfully', user });
+  } catch (error) {
+    console.error('Resume Delete Error:', error);
+    return res.status(500).json({ error: 'Failed to delete resume' });
   }
 };
 

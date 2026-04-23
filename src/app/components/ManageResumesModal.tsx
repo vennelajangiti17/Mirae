@@ -26,9 +26,9 @@ export function ManageResumesModal({ onClose }: Props) {
     const loadProfile = async () => {
       try {
         const profile = await authService.getProfile();
-        if (profile.resumeFileName && profile.resumeText) {
+        if (profile.resumeFileName || profile.resumeText) {
           setResumeInfo({
-            fileName: profile.resumeFileName,
+            fileName: profile.resumeFileName || 'Resume',
             uploadedAt: profile.resumeUploadedAt
               ? new Date(profile.resumeUploadedAt).toLocaleDateString('en-US', {
                   month: 'short', day: 'numeric', year: 'numeric'
@@ -81,7 +81,7 @@ export function ManageResumesModal({ onClose }: Props) {
         charCount: result.stats.charCount,
       });
 
-      alert("✨ Resume uploaded and AI Profile updated!");
+      setError('');
 
     } catch (err: any) {
       console.error("Upload failed:", err);
@@ -99,6 +99,7 @@ export function ManageResumesModal({ onClose }: Props) {
     try {
       await authService.deleteResume();
       setResumeInfo(null);
+      setError('');
     } catch (err: any) {
       setError(err.message || "Failed to delete resume.");
     }

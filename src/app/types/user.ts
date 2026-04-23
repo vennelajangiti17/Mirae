@@ -11,5 +11,7 @@ export interface UserProfile {
   name: string;
   email: string;
   resumeText: string;
+  resumeFileName?: string;
+  resumeUploadedAt?: string | null;
   socialLinks: SocialLink[];
 }

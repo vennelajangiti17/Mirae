@@ -20,6 +20,7 @@ import {
 } from '../services/dashboardService';
 
 type DashboardTab = 'jobs' | 'hackathons' | 'others';
+type SortOption = 'newest' | 'matchScore';
 type CardVariant = 'default' | 'selected' | 'rejected';
 
 interface Application {
@@ -133,6 +134,7 @@ export function Dashboard() {
   const [activeTab, setActiveTab] = useState<DashboardTab>('jobs');
   const [showAddModal, setShowAddModal] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [sortBy, setSortBy] = useState<SortOption>('newest');
   const [applications, setApplications] = useState<Application[]>([]);
   const [loading, setLoading] = useState(true);
   const [menuOpenId, setMenuOpenId] = useState<string | null>(null);
@@ -144,7 +146,7 @@ export function Dashboard() {
       try {
         const [, recentJobs] = await Promise.all([
           getDashboardSummary(),
-          getRecentJobs(),
+          getRecentJobs(sortBy),
         ]);
 
         setApplications((recentJobs || []).map(mapJobToApplication));
@@ -161,7 +163,7 @@ export function Dashboard() {
     }
 
     loadDashboard();
-  }, []);
+  }, [sortBy]);
 
   useEffect(() => {
     const closeMenu = () => setMenuOpenId(null);
@@ -247,6 +249,13 @@ export function Dashboard() {
   }, [applications, activeTab, searchQuery]);
 
   const activeSummary = useMemo(() => buildSummary(filteredApps), [filteredApps]);
+
+  const sortButtonLabel =
+    sortBy === 'newest' ? 'Sort by Best Match' : 'Sort by Newest';
+
+  const handleSortToggle = () => {
+    setSortBy((current) => (current === 'newest' ? 'matchScore' : 'newest'));
+  };
 
   const jobsSections = useMemo<SectionConfig[]>(
     () => [
@@ -531,8 +540,19 @@ export function Dashboard() {
       </div>
 
       <div className="p-8">
-        <div className="mb-6 text-sm text-[#14213D]">
-          {loading ? 'Loading dashboard...' : currentSummaryText}
+        <div className="mb-6 flex items-center justify-between gap-4">
+          <div className="text-sm text-[#14213D]">
+            {loading ? 'Loading dashboard...' : currentSummaryText}
+          </div>
+
+          <button
+            type="button"
+            onClick={handleSortToggle}
+            className="inline-flex items-center gap-2 rounded-md bg-[#14213D] px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-[#1f335c]"
+          >
+            <span>{sortBy === 'newest' ? '✨' : '🕒'}</span>
+            <span>{sortButtonLabel}</span>
+          </button>
         </div>
 
         {currentSections.map((section, sectionIndex) => (
@@ -578,7 +598,7 @@ export function Dashboard() {
           onSuccess={() => {
             void (async () => {
               try {
-                const recentJobs = await getRecentJobs();
+                const recentJobs = await getRecentJobs(sortBy);
                 setApplications((recentJobs || []).map(mapJobToApplication));
               } catch (err) {
                 console.error("Refresh error:", err);

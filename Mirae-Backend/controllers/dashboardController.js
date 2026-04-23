@@ -37,11 +37,17 @@ const getDashboardSummary = async (req, res) => {
 
 const getRecentJobs = async (req, res) => {
   try {
+    const sortBy = req.query.sortBy === 'matchScore' ? 'matchScore' : 'newest';
+    const sortField =
+      sortBy === 'matchScore'
+        ? { status: 1, matchScore: -1, createdAt: -1 }
+        : { status: 1, createdAt: -1 };
+
     const recentJobs = await Job.find({ userId: req.user.id })
-      .sort({ createdAt: -1 })
+      .sort(sortField)
       .limit(50)
       .select(
-        'company title status category url description matchScore matchedSkills missingSkills salaryRange location appliedDate deadline createdAt'
+        'company title status category url description matchScore skills salary location appliedDate deadline createdAt postedDate'
       );
 
     res.status(200).json(recentJobs);

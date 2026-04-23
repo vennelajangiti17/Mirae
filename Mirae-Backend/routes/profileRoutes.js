@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const profileController = require('../controllers/profileController');
-const { uploadProfilePhoto } = require('../middlewares/uploadMiddleware');
+const { uploadProfilePhoto, uploadResume } = require('../middlewares/uploadMiddleware');
 
 // 🔐 Import your authentication middleware (the Bouncer)
 // This ensures 'req.user' is populated with the user's ID
@@ -24,6 +24,8 @@ router.delete('/delete', protect, profileController.deleteAccount);
  * @access  Private
  */
 router.put('/resume', protect, profileController.updateResume);
+router.post('/resume/upload', protect, uploadResume.single('resume'), profileController.uploadResume);
+router.delete('/resume', protect, profileController.deleteResume);
 
 /**
  * @route   PUT /api/profile/social-links
