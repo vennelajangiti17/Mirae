@@ -265,30 +265,40 @@ export function Dashboard() {
     recruiterName: string,
     hiringManager: string
   ) => {
-    const response = await updateJobContacts(appId, recruiterName, hiringManager);
-    const updatedApp = response?.job ? mapJobToApplication(response.job) : null;
+    try {
+      const response = await updateJobContacts(appId, recruiterName, hiringManager);
+      const updatedApp = response?.job ? mapJobToApplication(response.job) : null;
 
-    if (!updatedApp) return;
+      if (!updatedApp) return;
 
-    setApplications((currentApps) =>
-      currentApps.map((app) => (app.id === appId ? updatedApp : app))
-    );
+      setApplications((currentApps) =>
+        currentApps.map((app) => (app.id === appId ? updatedApp : app))
+      );
 
-    setSelectedApp((prev) => (prev?.id === appId ? updatedApp : prev));
+      setSelectedApp((prev) => (prev?.id === appId ? updatedApp : prev));
+    } catch (error) {
+      console.error('[Dashboard] Save contacts error:', error);
+      window.alert('Failed to save contacts. Please try again.');
+    }
   };
 
 
   const handleNotesSaved = async (appId: string, notes: string) => {
-    const response = await updateJobNotes(appId, notes);
-    const updatedApp = response?.job ? mapJobToApplication(response.job) : null;
+    try {
+      const response = await updateJobNotes(appId, notes);
+      const updatedApp = response?.job ? mapJobToApplication(response.job) : null;
 
-    if (!updatedApp) return;
+      if (!updatedApp) return;
 
-    setApplications((currentApps) =>
-      currentApps.map((app) => (app.id === appId ? updatedApp : app))
-    );
+      setApplications((currentApps) =>
+        currentApps.map((app) => (app.id === appId ? updatedApp : app))
+      );
 
-    setSelectedApp((prev) => (prev?.id === appId ? updatedApp : prev));
+      setSelectedApp((prev) => (prev?.id === appId ? updatedApp : prev));
+    } catch (error) {
+      console.error('[Dashboard] Save notes error:', error);
+      window.alert('Failed to save note. Please try again.');
+    }
   };
 
   const filteredApps = useMemo(() => {
@@ -363,6 +373,21 @@ export function Dashboard() {
         title: 'Saved',
         apps: filteredApps.filter((app) => app.stage === 'Saved'),
       },
+      {
+        key: 'others-active',
+        title: 'Active',
+        apps: filteredApps.filter(
+          (app) => app.stage === 'Applied' || app.stage === 'Interviewing'
+        ),
+      },
+      {
+        key: 'others-completed',
+        title: 'Completed',
+        apps: filteredApps.filter(
+          (app) => app.stage === 'Offer' || app.stage === 'Rejected'
+        ),
+        variant: 'selected',
+      },
     ],
     [filteredApps]
   );
@@ -379,7 +404,7 @@ export function Dashboard() {
       ? `Total Jobs: ${activeSummary.totalJobs} | Saved: ${activeSummary.saved} | Applied / Interviewing: ${activeSummary.applied + activeSummary.interviewing} | Offers: ${activeSummary.offers} | Rejected: ${activeSummary.rejected}`
       : activeTab === 'hackathons'
       ? `Total Hackathons/Contests: ${filteredApps.length} | Saved: ${hackathonSections[0].apps.length} | Registered: ${hackathonSections[1].apps.length}`
-      : `Total Others: ${filteredApps.length} | Saved: ${othersSections[0].apps.length}`;
+      : `Total Others: ${filteredApps.length} | Saved: ${othersSections[0].apps.length} | Active: ${othersSections[1].apps.length} | Completed: ${othersSections[2].apps.length}`;
 
   const renderCard = (
     app: Application,
