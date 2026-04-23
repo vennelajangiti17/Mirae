@@ -50,5 +50,6 @@ const jobSchema = new mongoose.Schema({
 });
 
 jobSchema.index({ userId: 1, status: 1, matchScore: -1 });
+jobSchema.index({ title: 'text', company: 'text' });
 
 module.exports = mongoose.model('Job', jobSchema);
