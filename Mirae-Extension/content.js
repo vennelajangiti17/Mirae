@@ -35,10 +35,15 @@ const scrapeAndSendToMirae = () => {
       if (response && response.success) {
         const job = response.data.job;
         const score = job.matchScore;
+        const section = job.category === 'Hackathons' && job.status !== 'Saved'
+          ? 'Registered'
+          : job.status === 'Applied'
+          ? 'Applied / Interviewing'
+          : job.status || 'Saved';
         const scoreMsg = score !== null && score !== undefined
           ? ` with a Match Score of ${score}%`
           : `. Upload your resume on the dashboard to get a Match Score`;
-        alert(`✨ Success! "${job.title}" at ${job.company} saved to Mirae${scoreMsg}!`);
+        alert(`✨ Success! "${job.title}" at ${job.company} added to ${section}${scoreMsg}!`);
       } else {
         alert(`❌ Mirae Error: ${response ? response.error : 'Unknown error occurred.'}`);
       }

@@ -166,6 +166,119 @@ const normalizeCategory = (raw, context = '') => {
   return 'Others';
 };
 
+const PIPELINE_STATUSES = ['Saved', 'Applied', 'Interviewing', 'Offer', 'Rejected'];
+
+const normalizePipelineStatusValue = (raw) => {
+  const value = String(raw || '').toLowerCase().trim();
+  if (!value) return null;
+
+  if (['saved', 'not applied', 'not registered', 'currently not registered', 'not submitted', 'not started'].includes(value)) {
+    return 'Saved';
+  }
+
+  if (['applied', 'submitted', 'registered', 'completed', 'application submitted', 'registration complete'].includes(value)) {
+    return 'Applied';
+  }
+
+  if (['interview', 'interviewing', 'interview scheduled', 'screening', 'phone screen', 'onsite'].includes(value)) {
+    return 'Applied';
+  }
+
+  if (['offer', 'offered', 'accepted', 'selected', 'winner', 'shortlisted'].includes(value)) {
+    return 'Offer';
+  }
+
+  if (['rejected', 'declined', 'not selected', 'unsuccessful', 'rejection'].includes(value)) {
+    return 'Rejected';
+  }
+
+  return null;
+};
+
+const hasAnyPattern = (text, patterns) => patterns.some((pattern) => pattern.test(text));
+
+const inferPipelineStatus = ({ rawStatus, category, context }) => {
+  const directStatus = normalizePipelineStatusValue(rawStatus);
+  if (directStatus) return directStatus;
+
+  const text = ` ${String(context || '').toLowerCase().replace(/\s+/g, ' ')} `;
+  const isHackathon = category === 'Hackathons';
+
+  const negativeSavedPatterns = isHackathon
+    ? [
+        /\bnot\s+(?:yet\s+)?registered\b/,
+        /\bnot\s+currently\s+registered\b/,
+        /\byou\s+are\s+not\s+registered\b/,
+      ]
+    : [
+        /\bnot\s+(?:yet\s+)?applied\b/,
+        /\byou\s+have\s+not\s+applied\b/,
+        /\bapplication\s+not\s+submitted\b/,
+      ];
+
+  if (hasAnyPattern(text, negativeSavedPatterns)) return 'Saved';
+
+  if (hasAnyPattern(text, [
+    /\b(?:application|submission)\s+(?:was\s+)?(?:rejected|declined|unsuccessful)\b/,
+    /\bwe\s+(?:are\s+)?(?:sorry|unable)\b.{0,80}\b(?:not\s+selected|move\s+forward|proceed)\b/,
+    /\bnot\s+selected\b/,
+    /\bno\s+longer\s+under\s+consideration\b/,
+  ])) {
+    return 'Rejected';
+  }
+
+  if (hasAnyPattern(text, [
+    /\bcongratulations\b.{0,100}\b(?:offer|selected|accepted|winner)\b/,
+    /\b(?:offer|acceptance)\s+(?:letter|received|extended|accepted)\b/,
+    /\byou\s+(?:have\s+been\s+)?(?:selected|accepted)\b/,
+    /\bwinner\b/,
+  ])) {
+    return 'Offer';
+  }
+
+  if (hasAnyPattern(text, [
+    /\binterview\s+(?:scheduled|confirmed|invitation|invite|stage|round)\b/,
+    /\b(?:phone|technical|onsite|final)\s+(?:screen|interview|round)\b/,
+    /\bmeet\s+with\s+(?:the\s+)?(?:recruiter|hiring\s+manager|team)\b/,
+  ])) {
+    return 'Applied';
+  }
+
+  const activePatterns = isHackathon
+    ? [
+        /\byou\s+(?:are|'re)\s+registered\b/,
+        /\bregistered\s+(?:successfully|on|for)\b/,
+        /\bregistration\s+(?:confirmed|complete|successful)\b/,
+        /\bteam\s+(?:is\s+)?registered\b/,
+      ]
+    : [
+        /\byou\s+(?:have\s+)?applied\b/,
+        /\balready\s+applied\b/,
+        /\bapplied\s+on\b/,
+        /\bapplication\s+(?:submitted|received|complete|successful)\b/,
+        /\bsubmitted\s+(?:your\s+)?application\b/,
+        /\bthank\s+you\s+for\s+(?:applying|your\s+application)\b/,
+      ];
+
+  if (hasAnyPattern(text, activePatterns)) return 'Applied';
+
+  const openActionPatterns = isHackathon
+    ? [
+        /\bregistration\s+(?:is\s+)?(?:open|opens|closes|deadline)\b/,
+        /\bregister\s+(?:now|today)\b/,
+        /\bjoin\s+(?:this\s+)?(?:hackathon|contest|challenge)\b/,
+      ]
+    : [
+        /\bapply\s+now\b/,
+        /\bstart\s+(?:your\s+)?application\b/,
+        /\bsubmit\s+(?:an\s+)?application\b/,
+      ];
+
+  if (hasAnyPattern(text, openActionPatterns)) return 'Saved';
+
+  return 'Saved';
+};
+
 // Helper: Extract company name from URL as last resort
 const companyFromUrl = (url) => {
   try {
@@ -237,6 +350,8 @@ If you cannot find a specific detail, use "Not specified" or "Unknown". Only cla
 
 CRITICAL INSTRUCTION: I will also provide the candidate's current skills. You must compare the job's required skills against the candidate's skills to calculate a Match Score (0-100). Furthermore, you must categorize the job's required skills into "matched" (skills the candidate has) and "missing" (skills the candidate lacks). Never leave the skills arrays empty if the posting mentions technologies, tools, or competencies. Infer a concise required-skills list from the posting text when needed.
 
+PIPELINE STATUS INSTRUCTION: Decide where this item belongs in the user's Mirae dashboard. Return "Saved" if the page only shows an opportunity to apply/register or clearly says not applied/not registered. Return "Applied" if the page confirms the user already applied, submitted, registered, or has an interview/screen/round scheduled. Jobs use one combined dashboard section called "Applied / Interviewing", so do not return a separate Interviewing status. For hackathons/contests, registered means "Applied" because the dashboard displays those in the Registered section. Return "Offer" only when the user is selected, accepted, won, or received an offer. Return "Rejected" only when the page says unsuccessful, declined, rejected, or not selected. Do not treat generic buttons like "Apply now" or "Register" as Applied.
+
 Candidate's Current Skills: ${userProfileSkills}
 
 You MUST return ONLY valid JSON in this exact format:
@@ -248,6 +363,7 @@ You MUST return ONLY valid JSON in this exact format:
   "salary": "Compensation range, e.g., $120k - $150k or ₹15LPA",
   "deadline": "Exact deadline date if present, otherwise empty string",
   "category": "Strictly one of: Jobs, Hackathons, Others",
+  "pipelineStatus": "Strictly one of: Saved, Applied, Offer, Rejected",
   "description": "A clean 2-paragraph summary of the job and requirements",
   "matchScore": 85,
   "skills": {
@@ -272,6 +388,7 @@ ${rawText.substring(0, 6000)}`;
       salary: '',
       deadline: '',
       category: 'Jobs',
+      pipelineStatus: 'Saved',
       description: '',
       matchScore: null,
       skills: {
@@ -381,9 +498,30 @@ ${rawText.substring(0, 6000)}`;
 
     const finalCategory = normalizeCategory(incomingData.category || aiResult.category, categoryContext);
     const finalDeadline = parseDeadline(incomingData.deadline) || parseDeadline(aiResult.deadline);
-
+    const statusContext = [
+      incomingData.status,
+      aiResult.pipelineStatus,
+      aiResult.status,
+      aiResult.category,
+      aiResult.title,
+      aiResult.company,
+      aiResult.description,
+      rawText.substring(0, 6000)
+    ].join(' ');
+    const incomingStatus = PIPELINE_STATUSES.includes(incomingData.status)
+      ? normalizePipelineStatusValue(incomingData.status)
+      : null;
+    const finalStatus = incomingStatus || inferPipelineStatus({
+      rawStatus: aiResult.pipelineStatus || aiResult.status,
+      category: finalCategory,
+      context: statusContext
+    });
     // 6. Build final document
     const createdAt = new Date();
+    const appliedDate = finalStatus === 'Applied' || finalStatus === 'Offer'
+      ? createdAt
+      : null;
+
     const finalData = {
       title: finalTitle,
       company: finalCompany,
@@ -396,8 +534,9 @@ ${rawText.substring(0, 6000)}`;
       salary: incomingData.salaryRange || incomingData.salary || aiResult.salary || aiResult.salaryRange || '',
       deadline: finalDeadline,
       category: finalCategory,
-      status: 'Saved',
-      history: [{ status: 'Saved', date: createdAt }],
+      status: finalStatus,
+      appliedDate,
+      history: [{ status: finalStatus, date: createdAt }],
       userId: req.user.id,
       createdAt,
       updatedAt: createdAt
@@ -411,6 +550,7 @@ ${rawText.substring(0, 6000)}`;
       matchedCount: finalData.skills?.matched?.length,
       missingCount: finalData.skills?.missing?.length,
       category: finalData.category,
+      status: finalData.status,
       deadline: finalData.deadline
     });
 
