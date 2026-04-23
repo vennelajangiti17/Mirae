@@ -1,302 +1,528 @@
 <p align="center">
-  <img src="mirae-logo.svg" alt="Mirae Logo" width="120" />
+  <img src="mirae-logo.svg" alt="Mirae Logo" width="140" />
 </p>
 
-<h1 align="center">Mirae - AI-Powered Career Command Center</h1>
+<h1 align="center">Mirae</h1>
 
 <p align="center">
-  <strong>Save opportunities fast, understand them with AI, and track them in one calm workspace.</strong>
+  <strong>AI-Powered Career Command Center</strong><br />
+  <em>Save opportunities fast, understand them with AI, and track them in one calm workspace.</em>
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/Frontend-React%20%2B%20Vite-61DAFB?logo=react&logoColor=white" />
-  <img src="https://img.shields.io/badge/Backend-Node.js%20%2B%20Express-339933?logo=node.js&logoColor=white" />
-  <img src="https://img.shields.io/badge/Database-MongoDB%20Atlas-47A248?logo=mongodb&logoColor=white" />
-  <img src="https://img.shields.io/badge/AI-Groq%20Llama%203.3-FF6B35" />
-  <img src="https://img.shields.io/badge/Extension-Chrome%20MV3-4285F4?logo=googlechrome&logoColor=white" />
+  <img src="https://img.shields.io/badge/Frontend-React%20+%20Vite-61DAFB?style=for-the-badge&logo=react&logoColor=white" />
+  <img src="https://img.shields.io/badge/Backend-Node.js%20+%20Express-339933?style=for-the-badge&logo=node.js&logoColor=white" />
+  <img src="https://img.shields.io/badge/Database-MongoDB%20Atlas-47A248?style=for-the-badge&logo=mongodb&logoColor=white" />
+  <img src="https://img.shields.io/badge/AI-Groq%20Llama%203.3-FF6B35?style=for-the-badge" />
+  <img src="https://img.shields.io/badge/Extension-Chrome%20MV3-4285F4?style=for-the-badge&logo=googlechrome&logoColor=white" />
+  <img src="https://img.shields.io/badge/Language-TypeScript-3178C6?style=for-the-badge&logo=typescript&logoColor=white" />
 </p>
 
-## Overview
+<p align="center">
+  <a href="#-features">Features</a> •
+  <a href="#-how-it-works">How It Works</a> •
+  <a href="#-tech-stack">Tech Stack</a> •
+  <a href="#-project-structure">Project Structure</a> •
+  <a href="#-api-reference">API Reference</a> •
+  <a href="#-getting-started">Getting Started</a> •
+  <a href="#-team">Team</a>
+</p>
 
-Mirae is a full-stack opportunity tracker built around three working pieces:
+---
 
-- a React dashboard for browsing, filtering, and managing saved opportunities
-- an Express + MongoDB backend for auth, profile, AI enrichment, analytics, and persistence
-- a Chrome extension that clips pages and sends raw content to the backend
+## 📖 Overview
 
-The current product supports:
+**Mirae** (미래 — Korean for *"future"*) is a full-stack opportunity tracking platform designed for students and professionals navigating their career search. It brings together a polished React dashboard, an intelligent Express + MongoDB backend, and a Chrome extension into one unified workspace.
 
-- `Jobs` tracking with full analytics and a detailed side drawer
-- `Hackathons/Contests` tracking with saved and registered sections plus a dedicated side panel
-- `Others` tracking for workshops, webinars, sessions, fellowships, scholarships, and similar pages
-- JWT auth, profile management, resume upload, and social link management
-- card deletion from both the dashboard UI and MongoDB
+Mirae doesn't just store your saved jobs — it **understands** them. Using Groq-powered AI (Llama 3.3 70B), every clipped opportunity is automatically analyzed, categorized, skill-matched against your resume, and scored for relevance. The result is a career command center that helps you stay organized, focused, and data-driven.
 
-## Current Product Flow
+---
 
-1. A user logs into the Mirae dashboard.
-2. The dashboard syncs the JWT token to the Chrome extension.
-3. The extension scrapes visible page text and sends it to `POST /api/tracker`.
-4. The backend loads the user's resume text, sends the page content to Groq, and extracts:
-   - title
-   - company
-   - description
-   - location
-   - posted date
-   - salary
-   - deadline
-   - category
-   - skills
-   - match score
-5. The backend normalizes categories into:
-   - `Jobs`
-   - `Hackathons`
-   - `Others`
-6. The enriched record is saved in MongoDB with the logged-in user's `userId`.
-7. The dashboard loads the latest saved items and splits them by category and status.
+## ✨ Features
 
-## Features
+### 🖥️ Dashboard
 
-### Dashboard
+| Capability | Description |
+|---|---|
+| **Multi-Category Tracking** | Track **Jobs**, **Hackathons/Contests**, and **Others** (workshops, webinars, fellowships, scholarships, etc.) in organized tabs |
+| **Pipeline Management** | Jobs flow through `Saved → Applied / Interviewing → Offers → Rejected` stages |
+| **Hackathon Tracking** | Separate `Saved` and `Registered` sections for hackathons and contests |
+| **Dynamic Summary Bar** | Context-aware summary statistics that update based on the active tab |
+| **Manual Entry** | Add opportunities manually with a structured form when not using the extension |
+| **Card-Level Actions** | Delete records directly from the UI with instant MongoDB sync |
 
-- Jobs tab with sections for `Saved`, `Applied / Interviewing`, `Offers`, and `Rejected`
-- Hackathons/Contests tab with sections for `Saved` and `Registered`
-- Others tab with a `Saved` section
-- card-level delete menu that removes records from the UI and database
-- manual add flow for opportunities
-- top summary bar that changes based on the active tab
+### 🤖 AI-Powered Analysis
 
-### Detail Panels
+| Capability | Description |
+|---|---|
+| **Intelligent Extraction** | Automatically extracts title, company, location, salary, deadline, and description from raw page text |
+| **Smart Categorization** | Routes opportunities into `Jobs`, `Hackathons`, or `Others` using keyword intelligence and context analysis |
+| **Skill Matching** | Compares required skills against your uploaded resume using a comprehensive 40+ skill library |
+| **Match Scoring** | Generates a personalized 0–100 match score based on your resume profile |
+| **Pipeline Status Inference** | Detects whether you've already applied, been rejected, received an offer, or are still browsing |
 
-- Jobs open a full `ApplicationDetail` drawer with skill analysis, description, score, and status controls
-- Hackathons/Contests and Others open an `OpportunityDetail` drawer with:
-  - organizer
-  - deadline
-  - location
-  - status
-  - description
-  - original source link
+### 📊 Analytics & Insights
 
-### Analytics
+| Capability | Description |
+|---|---|
+| **Application Funnel** | Visual breakdown of your pipeline from Saved through to Offers |
+| **Status Distribution** | Pie/bar charts showing where your applications currently stand |
+| **Final Outcomes** | Track acceptance rates and rejection patterns |
+| **Top Skills** | See which skills appear most across your tracked opportunities |
+| **Summary Cards** | At-a-glance counts for saved, applied, rejected, and offer stages |
 
-- Analytics & Insights is currently scoped to `Jobs` only
-- includes:
-  - saved / applied / rejected / offers cards
-  - application funnel
-  - status breakdown
-  - final outcomes chart
-  - top skills
-- Hackathons/Contests and Others do not affect analytics calculations
+> **Note:** Analytics is currently scoped to **Jobs** only. Hackathons and Others do not affect analytics calculations.
 
-### Account and Profile
+### 📋 Detail Panels
 
-- register and login with JWT
-- protected routes on the frontend
-- profile fetch for logged-in user
-- resume upload and delete
-- social portfolio link management
-- logout flow with confirmation
+- **Jobs** → Full `ApplicationDetail` drawer with skill analysis breakdown, match score, description, networking contacts, personal notes, and status controls
+- **Hackathons & Others** → `OpportunityDetail` drawer with organizer, deadline, location, status, description, and source link
 
-### Chrome Extension
+### 📅 Calendar
 
-- right-click `Save to Mirae` context menu
-- page text scraping via content script
-- token sync from dashboard to extension
-- background worker posts clipped content to the backend
+| Capability | Description |
+|---|---|
+| **Event Management** | Create, edit, and delete calendar events for interviews, deadlines, and follow-ups |
+| **Dashboard Sync** | Automatically sync deadlines and important dates from tracked opportunities |
+| **Event Types** | Support for `interview`, `deadline`, `follow-up`, and `other` event categories |
+| **Status Tracking** | Mark events as `pending` or `completed` |
 
-### Calendar
+### 👤 Account & Profile
 
-- the calendar screen exists in the frontend and is currently a UI-rich mock view
-- it is not yet wired to a live backend route in the running server
+| Capability | Description |
+|---|---|
+| **JWT Authentication** | Secure registration and login with token-based auth |
+| **Protected Routes** | Frontend route guards ensure authenticated access |
+| **Profile Management** | Update name, email, and profile photo |
+| **Password Management** | Change password with current password verification |
+| **Resume Upload** | Upload PDF resumes with automatic text extraction via `pdf-parse` |
+| **Social Portfolio** | Manage links to GitHub, LinkedIn, portfolio sites, and more |
+| **Account Deletion** | Full account removal with data cleanup |
 
-## Tech Stack
+### ⚙️ Settings
+
+| Capability | Description |
+|---|---|
+| **Notifications** | Configure follow-up reminders, deadline alerts, interview reminders, and browser notifications |
+| **Notification Timing** | Choose `1 day`, `3 days`, or custom hours before events |
+| **Appearance** | Toggle between `light` and `dark` themes with accent style and card layout preferences |
+| **Privacy & Security** | Security activity alerts and profile discoverability controls |
+| **Data Management** | Clear all application data or reset settings to defaults |
+| **Danger Zone** | Account deletion and irreversible data operations with confirmation modals |
+
+### 🧩 Chrome Extension
+
+| Capability | Description |
+|---|---|
+| **One-Click Save** | Right-click → "Save to Mirae" context menu on any webpage |
+| **Intelligent Scraping** | Content script extracts visible page text for AI analysis |
+| **Token Sync** | Seamless authentication sync between the dashboard and extension |
+| **Background Processing** | Service worker handles page clipping and backend communication |
+| **Chrome MV3** | Built on Manifest V3 for modern Chrome compatibility |
+
+---
+
+## 🔄 How It Works
+
+```
+┌─────────────────┐     ┌──────────────────┐     ┌─────────────────┐
+│  Chrome Extension│────▶│   Express API    │────▶│   MongoDB Atlas  │
+│  (Page Scraper)  │     │   + Groq AI      │     │   (Persistence)  │
+└─────────────────┘     └──────────────────┘     └─────────────────┘
+                              │                          │
+                              ▼                          │
+                        ┌──────────┐                     │
+                        │ Llama 3.3│                     │
+                        │  (70B)   │                     │
+                        └──────────┘                     │
+                                                         │
+┌─────────────────────────────────────────────────────────┘
+│
+▼
+┌───────────────────────────────────────────────────────┐
+│               React Dashboard (Vite + TS)             │
+│  ┌──────────┐ ┌──────────┐ ┌────────┐ ┌───────────┐  │
+│  │ Dashboard │ │ Analytics│ │Calendar│ │ Settings  │  │
+│  └──────────┘ └──────────┘ └────────┘ └───────────┘  │
+└───────────────────────────────────────────────────────┘
+```
+
+### End-to-End Flow
+
+1. **User logs in** to the Mirae dashboard (JWT-authenticated)
+2. **JWT syncs** to the Chrome extension via `externally_connectable`
+3. **User right-clicks** on any job/hackathon/opportunity page → "Save to Mirae"
+4. **Content script** scrapes visible page text and sends it to `POST /api/tracker`
+5. **Backend loads** the user's resume text from MongoDB
+6. **Groq AI** (Llama 3.3 70B) analyzes the raw text and extracts structured data:
+   - Title, company, location, salary, posted date, deadline
+   - Category classification (`Jobs` / `Hackathons` / `Others`)
+   - Pipeline status inference (`Saved` / `Applied` / `Offer` / `Rejected`)
+   - Skill extraction with matched/missing breakdown
+   - Personalized match score (0–100)
+7. **Backend normalizes** and validates all extracted fields
+8. **Enriched record** is saved to MongoDB with the user's `userId`
+9. **Dashboard refreshes** and displays the new entry in the appropriate tab and section
+
+---
+
+## 🛠️ Tech Stack
 
 ### Frontend
 
-- React
-- Vite
-- TypeScript
-- Tailwind CSS
-- Motion
-- Recharts
-- Radix UI
-- Lucide React
+| Technology | Purpose |
+|---|---|
+| **React 18** | UI component library |
+| **Vite** | Build tool and dev server |
+| **TypeScript** | Type-safe development |
+| **Tailwind CSS 4** | Utility-first styling |
+| **Motion (Framer)** | Animations and transitions |
+| **Recharts** | Analytics charts and visualizations |
+| **Radix UI** | Accessible, unstyled UI primitives |
+| **Lucide React** | Icon library |
+| **React Router 7** | Client-side routing |
+| **Sonner** | Toast notifications |
+| **date-fns** | Date formatting and manipulation |
 
 ### Backend
 
-- Node.js
-- Express
-- Mongoose
-- JWT
-- bcrypt
-- multer
-- pdf-parse
+| Technology | Purpose |
+|---|---|
+| **Node.js** | JavaScript runtime |
+| **Express 5** | Web framework and API routing |
+| **Mongoose 9** | MongoDB ODM |
+| **JWT** | Token-based authentication |
+| **bcrypt** | Password hashing |
+| **Multer** | File upload handling (resumes, photos) |
+| **pdf-parse** | PDF text extraction for resumes |
+| **Groq SDK** | AI inference via Llama 3.3 70B |
 
-### AI and Data
+### Database & AI
 
-- Groq SDK with `llama-3.3-70b-versatile` for extraction and enrichment
-- MongoDB Atlas for persistence
+| Technology | Purpose |
+|---|---|
+| **MongoDB Atlas** | Cloud-hosted document database |
+| **Groq (Llama 3.3 70B)** | Fast AI extraction, classification, and skill matching |
 
-## Project Structure
+### Extension
+
+| Technology | Purpose |
+|---|---|
+| **Chrome MV3** | Extension platform |
+| **Service Worker** | Background page clipping and API communication |
+| **Content Script** | DOM text extraction |
+
+---
+
+## 📁 Project Structure
 
 ```text
 Mirae/
-├── src/
+├── src/                            # Frontend source
+│   ├── main.tsx                    # App entry point
 │   ├── app/
-│   │   ├── App.tsx
+│   │   ├── App.tsx                 # Root component with routing
 │   │   ├── components/
-│   │   │   ├── Dashboard.tsx
-│   │   │   ├── Analytics.tsx
-│   │   │   ├── CalendarView.tsx
-│   │   │   ├── Settings.tsx
-│   │   │   ├── ApplicationDetail.tsx
-│   │   │   ├── OpportunityDetail.tsx
-│   │   │   ├── AddManualModal.tsx
-│   │   │   ├── ManageResumesModal.tsx
-│   │   │   ├── LoginModal.tsx
-│   │   │   ├── SignupModal.tsx
-│   │   │   ├── Sidebar.tsx
-│   │   │   └── ProtectedRoute.tsx
+│   │   │   ├── LandingPage.tsx     # Public landing page
+│   │   │   ├── Dashboard.tsx       # Main dashboard with tabs
+│   │   │   ├── Analytics.tsx       # Analytics & insights view
+│   │   │   ├── CalendarView.tsx    # Calendar event management
+│   │   │   ├── Settings.tsx        # User settings panel
+│   │   │   ├── ApplicationDetail.tsx   # Job detail side drawer
+│   │   │   ├── OpportunityDetail.tsx   # Hackathon/Other detail drawer
+│   │   │   ├── AddManualModal.tsx      # Manual opportunity entry
+│   │   │   ├── ManageResumesModal.tsx  # Resume upload/management
+│   │   │   ├── SocialPortfolioModal.tsx # Social links manager
+│   │   │   ├── LoginModal.tsx          # Login form
+│   │   │   ├── SignupModal.tsx         # Registration form
+│   │   │   ├── LogoutConfirmModal.tsx  # Logout confirmation
+│   │   │   ├── ProfilePopover.tsx      # Profile quick view
+│   │   │   ├── ExtensionPopup.tsx      # Extension status UI
+│   │   │   ├── ExtensionOnboardingModal.tsx
+│   │   │   ├── BrandLogo.tsx           # Logo component
+│   │   │   ├── Sidebar.tsx             # Navigation sidebar
+│   │   │   ├── ProtectedRoute.tsx      # Auth route guard
+│   │   │   ├── ui/                     # Reusable UI primitives (shadcn)
+│   │   │   └── figma/                  # Figma design components
 │   │   ├── services/
-│   │   │   ├── authService.ts
-│   │   │   ├── dashboardService.ts
-│   │   │   ├── analyticsService.ts
-│   │   │   ├── profileService.ts
-│   │   │   ├── trackerService.ts
-│   │   │   └── settingsService.ts
-│   │   └── types/
-│   └── styles/
-├── Mirae-Backend/
-│   ├── config/db.js
+│   │   │   ├── api.ts              # HTTP client with auth headers
+│   │   │   ├── authService.ts      # Login/register/logout
+│   │   │   ├── dashboardService.ts # Dashboard data fetching
+│   │   │   ├── analyticsService.ts # Analytics data fetching
+│   │   │   ├── trackerService.ts   # Opportunity CRUD
+│   │   │   ├── profileService.ts   # Profile management
+│   │   │   ├── calendarService.ts  # Calendar event management
+│   │   │   ├── settingsService.ts  # Settings CRUD
+│   │   │   └── googleCalendarService.ts
+│   │   ├── types/
+│   │   │   ├── job.ts              # Job/Opportunity types
+│   │   │   ├── user.ts             # User types
+│   │   │   └── calendar.ts         # Calendar event types
+│   │   ├── hooks/
+│   │   │   ├── useTheme.ts         # Theme management hook
+│   │   │   ├── useNotificationScheduler.ts
+│   │   │   └── useExtensionDetection.ts
+│   │   └── contexts/
+│   │       └── UserContext.tsx      # Global user state
+│   └── styles/                     # Global CSS and theme tokens
+│
+├── Mirae-Backend/                  # Backend source
+│   ├── server.js                   # Express app entry point
+│   ├── config/
+│   │   └── db.js                   # MongoDB connection
 │   ├── controllers/
-│   │   ├── analyticsController.js
-│   │   ├── authController.js
-│   │   ├── dashboardController.js
-│   │   ├── profileController.js
-│   │   ├── trackerController.js
-│   │   └── settingsController.js
-│   ├── middlewares/authMiddleware.js
+│   │   ├── authController.js       # Register/login logic
+│   │   ├── trackerController.js    # AI analysis + CRUD
+│   │   ├── profileController.js    # Profile/resume/social links
+│   │   ├── dashboardController.js  # Dashboard summaries
+│   │   ├── analyticsController.js  # Analytics computations
+│   │   ├── calendarController.js   # Calendar event CRUD
+│   │   ├── settingsController.js   # User settings CRUD
+│   │   └── googleCalendarController.js
+│   ├── middlewares/
+│   │   └── authMiddleware.js       # JWT verification
 │   ├── models/
-│   │   ├── Job.js
-│   │   ├── User.js
-│   │   └── CalendarEvent.js
+│   │   ├── User.js                 # User schema
+│   │   ├── Job.js                  # Opportunity schema
+│   │   ├── CalendarEvent.js        # Calendar event schema
+│   │   └── Settings.js             # Settings schema
 │   ├── routes/
-│   │   ├── analyticsRoutes.js
 │   │   ├── authRoutes.js
-│   │   ├── dashboardRoutes.js
-│   │   ├── profileRoutes.js
 │   │   ├── trackerRoutes.js
-│   │   └── settingsRoutes.js
-│   └── server.js
-├── Mirae-Extension/
-│   ├── manifest.json
-│   ├── background.js
-│   ├── content.js
-│   ├── popup.html
-│   └── popup.js
+│   │   ├── profileRoutes.js
+│   │   ├── dashboardRoutes.js
+│   │   ├── analyticsRoutes.js
+│   │   ├── calendarRoutes.js
+│   │   ├── settingsRoutes.js
+│   │   └── jobRoutes.js
+│   └── utils/
+│       └── generateToken.js        # JWT token generator
+│
+├── Mirae-Extension/                # Chrome extension
+│   ├── manifest.json               # MV3 manifest
+│   ├── background.js               # Service worker
+│   ├── content.js                  # Content script (scraper)
+│   ├── popup.html                  # Extension popup UI
+│   └── popup.js                    # Popup logic
+│
+├── package.json
+├── vite.config.ts
+├── index.html
 └── README.md
 ```
 
-## Backend Endpoints
+---
 
-### Auth
+## 📡 API Reference
 
-- `POST /api/auth/register`
-- `POST /api/auth/login`
+All endpoints are prefixed with `/api`. Protected routes require a valid `Authorization: Bearer <token>` header.
+
+### Authentication
+
+| Method | Endpoint | Description | Auth |
+|---|---|---|---|
+| `POST` | `/api/auth/register` | Register a new user | Public |
+| `POST` | `/api/auth/login` | Login and receive JWT | Public |
+
+### Tracker (Opportunities)
+
+| Method | Endpoint | Description | Auth |
+|---|---|---|---|
+| `POST` | `/api/tracker` | Create a new tracked opportunity (AI-analyzed) | 🔒 |
+| `GET` | `/api/tracker` | Get all tracked opportunities for the user | 🔒 |
+| `DELETE` | `/api/tracker/:id` | Delete a tracked opportunity | 🔒 |
+| `PUT` | `/api/tracker/:id/status` | Update opportunity pipeline status | 🔒 |
+| `PUT` | `/api/tracker/:id/contacts` | Save networking contacts for an opportunity | 🔒 |
+| `PUT` | `/api/tracker/:id/notes` | Save personal notes for an opportunity | 🔒 |
 
 ### Profile
 
-- `GET /api/profile`
-- `POST /api/profile/resume/upload`
-- `PUT /api/profile/resume`
-- `DELETE /api/profile/resume`
-- `PUT /api/profile/social-links`
-
-### Tracker
-
-- `POST /api/tracker`
-- `GET /api/tracker`
-- `DELETE /api/tracker/:id`
+| Method | Endpoint | Description | Auth |
+|---|---|---|---|
+| `GET` | `/api/profile` | Get current user profile | 🔒 |
+| `PUT` | `/api/profile/update` | Update name and email | 🔒 |
+| `PUT` | `/api/profile/change-password` | Change password | 🔒 |
+| `POST` | `/api/profile/upload-photo` | Upload profile photo | 🔒 |
+| `DELETE` | `/api/profile/delete` | Delete user account | 🔒 |
+| `PUT` | `/api/profile/resume` | Update resume text | 🔒 |
+| `POST` | `/api/profile/resume/upload` | Upload PDF resume (auto text extraction) | 🔒 |
+| `DELETE` | `/api/profile/resume` | Delete uploaded resume | 🔒 |
+| `PUT` | `/api/profile/social-links` | Update social portfolio links | 🔒 |
 
 ### Dashboard
 
-- `GET /api/dashboard/summary`
-- `GET /api/dashboard/recent`
+| Method | Endpoint | Description | Auth |
+|---|---|---|---|
+| `GET` | `/api/dashboard/summary` | Get dashboard summary statistics | 🔒 |
+| `GET` | `/api/dashboard/recent` | Get recently tracked opportunities | 🔒 |
 
 ### Analytics
 
-- `GET /api/analytics/overview`
-- `GET /api/analytics/status-breakdown`
-- `GET /api/analytics/trends`
+| Method | Endpoint | Description | Auth |
+|---|---|---|---|
+| `GET` | `/api/analytics/overview` | Get analytics overview (saved/applied/rejected/offers) | 🔒 |
+| `GET` | `/api/analytics/status-breakdown` | Get status distribution breakdown | 🔒 |
+| `GET` | `/api/analytics/trends` | Get application trends over time | 🔒 |
 
-## Environment Variables
+### Calendar
 
-Create `Mirae-Backend/.env` with:
+| Method | Endpoint | Description | Auth |
+|---|---|---|---|
+| `GET` | `/api/calendar` | Get all calendar events | 🔒 |
+| `GET` | `/api/calendar/:id` | Get a specific event | 🔒 |
+| `POST` | `/api/calendar` | Create a new calendar event | 🔒 |
+| `PUT` | `/api/calendar/:id` | Update a calendar event | 🔒 |
+| `DELETE` | `/api/calendar/:id` | Delete a calendar event | 🔒 |
+| `POST` | `/api/calendar/sync-dashboard-reminders` | Sync deadlines from tracked opportunities | 🔒 |
+
+### Settings
+
+| Method | Endpoint | Description | Auth |
+|---|---|---|---|
+| `GET` | `/api/settings` | Get user settings | 🔒 |
+| `PUT` | `/api/settings` | Update user settings | 🔒 |
+| `POST` | `/api/settings/reset` | Reset settings to defaults | 🔒 |
+| `POST` | `/api/settings/clear-data` | Clear all application data | 🔒 |
+
+### Health Check
+
+| Method | Endpoint | Description | Auth |
+|---|---|---|---|
+| `GET` | `/health` | Backend health status | Public |
+
+---
+
+## 🚀 Getting Started
+
+### Prerequisites
+
+- **Node.js** ≥ 18.x
+- **npm** ≥ 9.x
+- **MongoDB Atlas** account (or local MongoDB instance)
+- **Groq API Key** — [Get one free at console.groq.com](https://console.groq.com)
+- **Google Chrome** (for the extension)
+
+### 1. Clone the Repository
+
+```bash
+git clone https://github.com/vennelajangiti17/Mirae.git
+cd Mirae
+```
+
+### 2. Set Up Environment Variables
+
+Create a `.env` file inside the `Mirae-Backend/` directory:
 
 ```env
-MONGO_URI=<your_mongodb_atlas_uri>
-JWT_SECRET=<your_jwt_secret>
-GROQ_API_KEY=<your_groq_api_key>
+MONGO_URI=your_mongodb_atlas_connection_string
+JWT_SECRET=your_secure_jwt_secret
+GROQ_API_KEY=your_groq_api_key
 PORT=5000
 ```
 
-Notes:
+> **Important:** The `GROQ_API_KEY` is required for the AI-powered tracker analysis pipeline. Without it, saved opportunities will fall back to URL-based metadata only.
 
-- `GROQ_API_KEY` is required for the tracker analysis flow
-- the backend package still includes `@google/generative-ai`, but the current tracker pipeline uses Groq
-- frontend services expect the backend on `http://localhost:5000`
-
-## Local Setup
-
-### 1. Install frontend dependencies
+### 3. Install Dependencies
 
 ```bash
-cd /Users/vennelajangiti17/Documents/Mirae
+# Frontend dependencies
 npm install
+
+# Backend dependencies
+cd Mirae-Backend
+npm install
+cd ..
 ```
 
-### 2. Install backend dependencies
+### 4. Start the Backend Server
 
 ```bash
-cd /Users/vennelajangiti17/Documents/Mirae/Mirae-Backend
-npm install
-```
-
-### 3. Start the backend
-
-```bash
-cd /Users/vennelajangiti17/Documents/Mirae/Mirae-Backend
+cd Mirae-Backend
 node server.js
 ```
 
-### 4. Start the frontend
+The backend will start on `http://localhost:5000`. You can verify with:
 
 ```bash
-cd /Users/vennelajangiti17/Documents/Mirae
+curl http://localhost:5000/health
+# → {"message":"Mirae Backend is running perfectly! 🚀"}
+```
+
+### 5. Start the Frontend Dev Server
+
+```bash
+# From the project root
 npm run dev
 ```
 
-### 5. Load the extension in Chrome
+The frontend will be available at `http://localhost:5173`.
 
-1. Open `chrome://extensions`
-2. Turn on Developer Mode
-3. Click `Load unpacked`
-4. Select `Mirae-Extension`
+### 6. Load the Chrome Extension
 
-## Current Notes and Caveats
+1. Open `chrome://extensions` in Google Chrome
+2. Enable **Developer Mode** (toggle in the top-right corner)
+3. Click **Load unpacked**
+4. Select the `Mirae-Extension/` directory
+5. Log into the Mirae dashboard — the JWT token will automatically sync to the extension
 
-- Analytics is intentionally Jobs-only
-- the calendar page is currently mock data in the frontend
-- category normalization now tries to route all non-job, non-hackathon pages into `Others`
-- deadline extraction depends on deadline text being present in the scraped page content
-- existing bad records in MongoDB do not auto-fix when classification logic changes
+---
 
-## Team Notes
+## 🧪 Usage Guide
 
-- pull latest `main` before running the app locally
-- if backend dependencies change, rerun `npm install` inside `Mirae-Backend`
-- if the extension saves fail, check:
-  - dashboard login state
-  - token sync
-  - backend server running on port `5000`
-  - `GROQ_API_KEY` present in `Mirae-Backend/.env`
+### Saving an Opportunity via Extension
+
+1. Navigate to any job posting, hackathon page, or opportunity listing
+2. Right-click anywhere on the page
+3. Select **"Save to Mirae"** from the context menu
+4. The page will be analyzed by AI and appear in your dashboard within seconds
+
+### Manual Entry
+
+1. Click the **"+ Add"** button on the dashboard
+2. Fill in the opportunity details (title, company, category, etc.)
+3. The entry will be saved to your account
+
+### Tracking Your Pipeline
+
+- Use the **dashboard tabs** to switch between Jobs, Hackathons, and Others
+- Click any card to open the **detail drawer** for full information
+- Update pipeline status, add notes, and save networking contacts
+- Visit **Analytics** for visual insights into your job search progress
+
+---
+
+## 📝 Current Notes & Caveats
+
+- **Analytics scope** — Analytics & Insights is intentionally limited to Jobs only
+- **Category normalization** — All non-job, non-hackathon pages are routed into `Others`
+- **Deadline extraction** — Depends on deadline text being present in the scraped page content
+- **Match scores** — Requires an uploaded resume; without one, match scores show as `null`
+- **Existing records** — Bad records in MongoDB do not auto-fix when classification logic changes
+
+---
+
+## 👥 Team
+
+<table>
+  <tr>
+    <td align="center"><strong>Shreya Kumari</strong><br /><sub>Developer</sub></td>
+    <td align="center"><strong>Vennela Jangiti</strong><br /><sub>Developer</sub></td>
+    <td align="center"><strong>Hasini Nallan Chakravarthula</strong><br /><sub>Developer</sub></td>
+    <td align="center"><strong>Akshaya Boda</strong><br /><sub>Developer</sub></td>
+    <td align="center"><strong>Sasi Stuthika Adimulapu</strong><br /><sub>Developer</sub></td>
+  </tr>
+</table>
+
+---
+
+## 📄 License
+
+This project uses components from [shadcn/ui](https://ui.shadcn.com/) under the [MIT License](https://github.com/shadcn-ui/ui/blob/main/LICENSE.md) and photos from [Unsplash](https://unsplash.com) under the [Unsplash License](https://unsplash.com/license).
+
+---
+
+<p align="center">
+  <img src="mirae-logo.svg" alt="Mirae" width="40" />
+  <br />
+  <em>Built to keep your opportunity pipeline focused and organized.</em>
+</p>
