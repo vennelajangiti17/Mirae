@@ -13,7 +13,7 @@ export interface Job {
   // 2. Kanban Dashboard Status
   status: 'Saved' | 'Applied' | 'Interviewing' | 'Offer' | 'Rejected';
 
-  // 3. Smart Features (AI Data)
+  // 3. Smart Features
   matchScore: number | null;
   skills: {
     all: string[];

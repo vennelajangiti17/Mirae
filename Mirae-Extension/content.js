@@ -1,6 +1,6 @@
 // content.js — Mirae Omni-Scraper
 // Instead of guessing CSS selectors for each job board,
-// we grab ALL visible text and let the AI extract the structured data.
+// we grab ALL visible text and let the backend extract the structured data.
 
 document.documentElement.setAttribute('data-mirae-installed', 'true');
 
@@ -10,7 +10,7 @@ const scrapeAndSendToMirae = () => {
   // Grab EVERYTHING visible on the page, collapse whitespace
   let rawText = document.body.innerText.replace(/\s+/g, ' ').trim();
 
-  // Send the first 8000 characters — plenty of context for AI
+  // Send the first 8000 characters — plenty of context for extraction
   // without footer/nav junk overwhelming it
   const jobData = {
     url: window.location.href,

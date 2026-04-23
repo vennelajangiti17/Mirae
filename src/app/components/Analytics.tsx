@@ -483,7 +483,7 @@ export function Analytics() {
         >
           <div className="flex items-center justify-between mb-5">
             <h3 className="text-lg font-bold text-[#000000]">
-              AI Match Insights
+              Match Insights
             </h3>
             <span className="text-sm text-[#6b7280] font-medium">
               Jobs only
@@ -499,7 +499,7 @@ export function Analytics() {
                 {matchInsights?.allJobsAverage ?? 0}%
               </div>
               <p className="mt-2 text-sm text-[#6b7280]">
-                Average AI score across every scored job in your pipeline.
+                Average match score across every scored job in your pipeline.
               </p>
             </div>
 
@@ -511,7 +511,7 @@ export function Analytics() {
                 {matchInsights?.interviewAverage ?? 0}%
               </div>
               <p className="mt-2 text-sm text-[#8A5A14]">
-                Average AI score for the jobs that are progressing the furthest.
+                Average match score for the jobs that are progressing the furthest.
               </p>
             </div>
           </div>

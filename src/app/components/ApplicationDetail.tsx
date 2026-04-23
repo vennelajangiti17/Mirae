@@ -47,7 +47,7 @@ export function ApplicationDetail({ application, onClose, onStatusChange, onCont
   const normalizeStatusValue = (value: string) => (value === 'Interviewing' ? 'Applied' : value);
   const [status, setStatus] = useState(normalizeStatusValue(application.stage || 'Saved'));
   
-  // New State Variables for AI & Networking
+  // New State Variables for Networking
   const [recruiterName, setRecruiterName] = useState(application.contacts?.recruiterName || '');
   const [hiringManager, setHiringManager] = useState(application.contacts?.hiringManager || '');
   const [scratchpadText, setScratchpadText] = useState(application.notes || '');
@@ -286,7 +286,7 @@ export function ApplicationDetail({ application, onClose, onStatusChange, onCont
               
               <div className="flex items-center justify-between mb-8">
                 <div className="flex-1 mr-8">
-                  <h3 className="text-lg font-bold text-[#000000] mb-3">AI Skill Gap Analysis</h3>
+                  <h3 className="text-lg font-bold text-[#000000] mb-3">Skill Gap Analysis</h3>
 
                   {hasSkillAnalysis ? (
                     <>

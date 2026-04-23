@@ -561,7 +561,7 @@ ${rawText.substring(0, 6000)}`;
 
     res.status(201).json({
       message: aiResult.matchScore !== null
-        ? "AI Analysis Complete and Personalized!"
+        ? "Analysis Complete and Personalized!"
         : "Job saved! Upload a resume to get Match Scores.",
       job: newJob
     });
