@@ -1,23 +1,8 @@
 const User = require('../models/User');
-const multer = require('multer');
-const pdfParse = require('pdf-parse');
+const Job = require('../models/Job');
+const bcrypt = require('bcrypt');
 
-// Configure multer to store file in memory (no disk writes needed)
-const upload = multer({
-  storage: multer.memoryStorage(),
-  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB max
-  fileFilter: (req, file, cb) => {
-    const allowed = ['application/pdf', 'text/plain', 'text/markdown'];
-    if (allowed.includes(file.mimetype) || file.originalname.endsWith('.txt') || file.originalname.endsWith('.md')) {
-      cb(null, true);
-    } else {
-      cb(new Error('Only .pdf, .txt, and .md files are allowed.'));
-    }
-  }
-});
-
-// Export the multer middleware so routes can use it
-exports.uploadMiddleware = upload.single('resume');
+const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 // Get the logged-in user's profile data
 exports.getProfile = async (req, res) => {
@@ -34,66 +19,104 @@ exports.getProfile = async (req, res) => {
   }
 };
 
-// Upload and parse a resume file (PDF or TXT), then save extracted text
-exports.uploadResume = async (req, res) => {
+exports.updateProfile = async (req, res) => {
   try {
-    if (!req.file) {
-      return res.status(400).json({ error: "No file uploaded. Please select a .pdf or .txt file." });
+    const { name, email } = req.body;
+
+    if (!name || !name.trim()) {
+      return res.status(400).json({ error: "Name is required" });
     }
 
-    console.log("📄 Resume upload received:", req.file.originalname, `(${req.file.mimetype}, ${(req.file.size / 1024).toFixed(1)}KB)`);
-
-    let extractedText = '';
-
-    if (req.file.mimetype === 'application/pdf') {
-      // Parse PDF binary buffer to extract text
-      try {
-        const pdfData = await pdfParse(req.file.buffer);
-        extractedText = pdfData.text;
-        console.log(`📑 PDF parsed: ${pdfData.numpages} pages, ${extractedText.length} chars extracted`);
-      } catch (pdfErr) {
-        console.error("❌ PDF parsing failed:", pdfErr.message);
-        return res.status(400).json({ error: "Could not parse this PDF. It may be scanned or image-based. Try a text-based PDF or .txt file." });
-      }
-    } else {
-      // Plain text files (.txt, .md)
-      extractedText = req.file.buffer.toString('utf-8');
-      console.log(`📝 Text file read: ${extractedText.length} chars`);
+    if (!email || !emailRegex.test(email)) {
+      return res.status(400).json({ error: "A valid email is required" });
     }
 
-    if (!extractedText || extractedText.trim().length < 20) {
-      return res.status(400).json({ error: "The uploaded file appears to be empty or too short. Please upload a file with actual resume content." });
+    const normalizedEmail = email.trim().toLowerCase();
+    const existingUser = await User.findOne({
+      email: normalizedEmail,
+      _id: { $ne: req.user.id }
+    });
+
+    if (existingUser) {
+      return res.status(409).json({ error: "Email is already in use" });
     }
 
-    // Save the extracted text and file metadata to the user record
     const updatedUser = await User.findByIdAndUpdate(
       req.user.id,
-      { 
-        resumeText: extractedText.trim(),
-        resumeFileName: req.file.originalname,
-        resumeUploadedAt: new Date()
+      {
+        name: name.trim(),
+        email: normalizedEmail,
+        $set: {
+          "settings.profile.name": name.trim(),
+          "settings.profile.email": normalizedEmail
+        }
       },
       { new: true }
-    ).select('-password');
+    ).select("-password");
 
-    console.log("✅ Resume saved for user:", updatedUser.name, `(${extractedText.trim().length} chars)`);
+    if (!updatedUser) {
+      return res.status(404).json({ error: "User not found" });
+    }
 
-    res.status(200).json({ 
-      message: "✅ Resume uploaded and AI Profile updated!", 
-      user: updatedUser,
-      stats: {
-        fileName: req.file.originalname,
-        charCount: extractedText.trim().length,
-        uploadedAt: new Date().toISOString()
-      }
+    return res.status(200).json({
+      message: "Profile updated successfully",
+      user: updatedUser
     });
   } catch (error) {
-    console.error("Resume Upload Error:", error);
-    res.status(500).json({ error: error.message || "Internal Server Error" });
+    console.error("Profile Update Error:", error);
+    return res.status(500).json({ error: "Internal Server Error" });
   }
 };
 
-// Save or update the user's resume text (legacy JSON endpoint — kept for backward compat)
+exports.uploadProfilePhoto = async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: "No file uploaded" });
+    }
+
+    const baseUrl = `${req.protocol}://${req.get("host")}`;
+    const photoUrl = `${baseUrl}/uploads/profile/${req.file.filename}`;
+
+    const updatedUser = await User.findByIdAndUpdate(
+      req.user.id,
+      { profilePhoto: photoUrl },
+      { new: true }
+    ).select("-password");
+
+    if (!updatedUser) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    return res.status(200).json({
+      message: "Profile photo uploaded successfully",
+      profilePhoto: photoUrl,
+      user: updatedUser
+    });
+  } catch (error) {
+    console.error("Profile Photo Upload Error:", error);
+    return res.status(500).json({ error: "Internal Server Error" });
+  }
+};
+
+exports.deleteAccount = async (req, res) => {
+  try {
+    const userId = req.user.id;
+
+    await Promise.all([
+      Job.deleteMany({ userId }),
+      User.findByIdAndDelete(userId)
+    ]);
+
+    return res.status(200).json({
+      message: "Account and related application data deleted successfully"
+    });
+  } catch (error) {
+    console.error("Delete Account Error:", error);
+    return res.status(500).json({ error: "Internal Server Error" });
+  }
+};
+
+// Save or update the user's resume text
 exports.updateResume = async (req, res) => {
   try {
     const { resumeText } = req.body;
@@ -143,25 +166,35 @@ exports.updateSocialLinks = async (req, res) => {
   }
 };
 
-// Delete the user's resume
-exports.deleteResume = async (req, res) => {
+exports.changePassword = async (req, res) => {
   try {
-    const updatedUser = await User.findByIdAndUpdate(
-      req.user.id,
-      { 
-        resumeText: '',
-        resumeFileName: '',
-        resumeUploadedAt: null
-      },
-      { new: true }
-    ).select('-password');
+    const { currentPassword, newPassword } = req.body;
 
-    res.status(200).json({ 
-      message: "Resume deleted successfully.", 
-      user: updatedUser 
-    });
+    if (!currentPassword || !newPassword) {
+      return res.status(400).json({ error: "Current password and new password are required" });
+    }
+
+    if (String(newPassword).length < 6) {
+      return res.status(400).json({ error: "New password must be at least 6 characters long" });
+    }
+
+    const user = await User.findById(req.user.id);
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    const passwordMatches = await bcrypt.compare(currentPassword, user.password);
+    if (!passwordMatches) {
+      return res.status(401).json({ error: "Current password is incorrect" });
+    }
+
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    user.password = hashedPassword;
+    await user.save();
+
+    return res.status(200).json({ message: "Password changed successfully" });
   } catch (error) {
-    console.error("Resume Delete Error:", error);
-    res.status(500).json({ error: "Internal Server Error" });
+    console.error("Change Password Error:", error);
+    return res.status(500).json({ error: "Internal Server Error" });
   }
 };

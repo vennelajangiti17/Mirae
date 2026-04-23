@@ -50,6 +50,10 @@ const userSchema = new mongoose.Schema({
   googleTokenExpiry: {
     type: Number,
     default: 0,
+  },
+  profilePhoto: {
+    type: String,
+    default: '',
   }
 }, {
   // Automatically manages 'createdAt' and 'updatedAt' fields

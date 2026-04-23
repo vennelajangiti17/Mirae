@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useTheme } from '../hooks/useTheme';
+import { useUser } from '../contexts/UserContext';
 
 interface Props {
   onClose: () => void;
@@ -14,6 +15,7 @@ interface Props {
 export function ProfilePopover({ onClose, onManageResumes, onSocialPortfolio, onLogout }: Props) {
   const [isHoveringAvatar, setIsHoveringAvatar] = useState(false);
   const { theme, toggleTheme } = useTheme();
+  const { user } = useUser();
   const isDarkMode = theme === 'dark';
 
   const menuItems = [
@@ -22,6 +24,11 @@ export function ProfilePopover({ onClose, onManageResumes, onSocialPortfolio, on
     { icon: Moon, label: 'Theme (Dark/Light)', hasToggle: true },
     { icon: HelpCircle, label: 'Help & Community', onClick: () => {} },
   ];
+
+  // Get user initials for fallback
+  const getUserInitials = (name: string) => {
+    return name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
+  };
 
   return createPortal(
     <>
@@ -43,16 +50,24 @@ export function ProfilePopover({ onClose, onManageResumes, onSocialPortfolio, on
         {/* Header Section */}
         <div className="p-4 border-b border-[#E5E5E5]">
           <div className="flex items-center gap-3">
-            {/* Avatar with Hover State */}
+            {/* Avatar with Profile Photo or Initials */}
             <div
               className="relative"
               onMouseEnter={() => setIsHoveringAvatar(true)}
               onMouseLeave={() => setIsHoveringAvatar(false)}
             >
               <div className="w-12 h-12 rounded-full bg-[#FCA311] flex items-center justify-center text-[#000000] font-bold text-lg relative overflow-hidden cursor-pointer">
-                <span className={`transition-opacity ${isHoveringAvatar ? 'opacity-30' : 'opacity-100'}`}>
-                  {typeof window !== 'undefined' ? (localStorage.getItem('userName') || 'Mirae User').split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase() : 'MU'}
-                </span>
+                {user?.profilePhoto ? (
+                  <img
+                    src={user.profilePhoto}
+                    alt="Profile"
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <span className={`transition-opacity ${isHoveringAvatar ? 'opacity-30' : 'opacity-100'}`}>
+                    {user?.name ? getUserInitials(user.name) : 'MU'}
+                  </span>
+                )}
                 <AnimatePresence>
                   {isHoveringAvatar && (
                     <>
@@ -81,7 +96,7 @@ export function ProfilePopover({ onClose, onManageResumes, onSocialPortfolio, on
             {/* User Info */}
             <div className="flex-1">
               <div className="font-bold text-[#000000]">
-                {typeof window !== 'undefined' ? localStorage.getItem('userName') || 'Mirae User' : 'Mirae User'}
+                {user?.name || 'Mirae User'}
               </div>
               <div className="text-xs text-[#73766A]">Job Seeker</div>
             </div>

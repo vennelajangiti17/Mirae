@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const profileController = require('../controllers/profileController');
+const { uploadProfilePhoto } = require('../middlewares/uploadMiddleware');
 
 // 🔐 Import your authentication middleware (the Bouncer)
 // This ensures 'req.user' is populated with the user's ID
@@ -12,27 +13,17 @@ const { protect } = require('../middlewares/authMiddleware');
  * @access  Private
  */
 router.get('/', protect, profileController.getProfile);
-
-/**
- * @route   POST /api/profile/resume/upload
- * @desc    Upload a resume file (PDF or TXT) — parses and extracts text
- * @access  Private
- */
-router.post('/resume/upload', protect, profileController.uploadMiddleware, profileController.uploadResume);
+router.put('/update', protect, profileController.updateProfile);
+router.put('/change-password', protect, profileController.changePassword);
+router.post('/upload-photo', protect, uploadProfilePhoto.single('photo'), profileController.uploadProfilePhoto);
+router.delete('/delete', protect, profileController.deleteAccount);
 
 /**
  * @route   PUT /api/profile/resume
- * @desc    Update/Save user's resume text for AI analysis (legacy JSON endpoint)
+ * @desc    Update/Save user's resume text for AI analysis
  * @access  Private
  */
 router.put('/resume', protect, profileController.updateResume);
-
-/**
- * @route   DELETE /api/profile/resume
- * @desc    Delete the user's uploaded resume
- * @access  Private
- */
-router.delete('/resume', protect, profileController.deleteResume);
 
 /**
  * @route   PUT /api/profile/social-links
