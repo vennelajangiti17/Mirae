@@ -22,6 +22,14 @@ const handleResponse = async <T>(response: Response): Promise<T> => {
 };
 
 export const calendarService = {
+  async syncDashboardReminders(): Promise<{ syncedCount: number; events: CalendarEvent[] }> {
+    const response = await fetch(`${API_URL}/sync-dashboard-reminders`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+    });
+    return handleResponse<{ syncedCount: number; events: CalendarEvent[] }>(response);
+  },
+
   async getAllEvents(): Promise<{ events: CalendarEvent[] }> {
     const response = await fetch(API_URL, {
       method: 'GET',

@@ -10,6 +10,10 @@ export interface CalendarEventBase {
   type: CalendarEventType;
   status: CalendarEventStatus;
   location?: string;
+  applyLink?: string;
+  source?: 'manual' | 'dashboard' | 'google';
+  sourceId?: string;
+  googleEventId?: string;
 }
 
 export interface CalendarEvent extends CalendarEventBase {

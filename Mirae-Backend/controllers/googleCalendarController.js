@@ -5,6 +5,7 @@ const CalendarEvent = require('../models/CalendarEvent');
 const GOOGLE_AUTH_URL = 'https://accounts.google.com/o/oauth2/v2/auth';
 const GOOGLE_TOKEN_URL = 'https://oauth2.googleapis.com/token';
 const GOOGLE_CALENDAR_EVENTS_URL = 'https://www.googleapis.com/calendar/v3/calendars/primary/events';
+const DEFAULT_TIME_ZONE = process.env.GOOGLE_CALENDAR_TIME_ZONE || 'Asia/Kolkata';
 
 const getGoogleCredentials = () => {
   const clientId = process.env.GOOGLE_CLIENT_ID;
@@ -74,6 +75,151 @@ const refreshGoogleAccessToken = async (refreshToken) => {
   }
 
   return payload;
+};
+
+const getValidGoogleAccessToken = async (user) => {
+  if (!user || !user.googleRefreshToken) {
+    return null;
+  }
+
+  let accessToken = user.googleAccessToken;
+  const now = Date.now();
+
+  if (!accessToken || user.googleTokenExpiry <= now + 60000) {
+    const refreshed = await refreshGoogleAccessToken(user.googleRefreshToken);
+    accessToken = refreshed.access_token;
+    user.googleAccessToken = refreshed.access_token;
+    user.googleTokenExpiry = Date.now() + (refreshed.expires_in || 0) * 1000;
+    await user.save();
+  }
+
+  return accessToken;
+};
+
+const parseEventTime = (date, time) => {
+  const eventDate = new Date(date);
+  const [timeValue = '09:00', period = 'AM'] = String(time || '09:00 AM').trim().split(' ');
+  const [rawHours, rawMinutes] = timeValue.split(':').map(Number);
+
+  let hours = Number.isNaN(rawHours) ? 9 : rawHours;
+  const minutes = Number.isNaN(rawMinutes) ? 0 : rawMinutes;
+
+  if (period.toUpperCase() === 'PM' && hours !== 12) hours += 12;
+  if (period.toUpperCase() === 'AM' && hours === 12) hours = 0;
+
+  eventDate.setHours(hours, minutes, 0, 0);
+  return eventDate;
+};
+
+const buildGoogleEventPayload = (event) => {
+  const isInterview = event.type === 'interview';
+  const start = isInterview
+    ? parseEventTime(event.date, event.startTime || '09:00 AM')
+    : parseEventTime(event.date, event.endTime || '11:59 PM');
+  let end = isInterview
+    ? parseEventTime(event.date, event.endTime || '10:00 AM')
+    : new Date(start.getTime() + 15 * 60 * 1000);
+
+  if (end <= start) {
+    end = new Date(start.getTime() + 60 * 60 * 1000);
+  }
+
+  const descriptionParts = [event.description || ''];
+  if (event.applyLink) {
+    const linkLabel = event.type === 'deadline' ? 'Apply link' : 'Official website';
+    descriptionParts.push(`${linkLabel}: ${event.applyLink}`);
+  }
+
+  return {
+    summary: event.title,
+    description: descriptionParts.filter(Boolean).join('\n\n'),
+    location: event.location || '',
+    start: {
+      dateTime: start.toISOString(),
+      timeZone: DEFAULT_TIME_ZONE,
+    },
+    end: {
+      dateTime: end.toISOString(),
+      timeZone: DEFAULT_TIME_ZONE,
+    },
+    reminders: {
+      useDefault: false,
+      overrides: [
+        { method: 'popup', minutes: 30 },
+        { method: 'email', minutes: 60 },
+      ],
+    },
+    extendedProperties: {
+      private: {
+        miraeEventId: String(event._id),
+        miraeEventType: event.type || 'other',
+      },
+    },
+  };
+};
+
+const upsertMiraeEventToGoogle = async (userId, calendarEvent) => {
+  const user = await User.findById(userId);
+  const accessToken = await getValidGoogleAccessToken(user);
+
+  if (!accessToken) {
+    return null;
+  }
+
+  const payload = buildGoogleEventPayload(calendarEvent);
+  const existingGoogleEventId = calendarEvent.googleEventId;
+  const url = existingGoogleEventId
+    ? `${GOOGLE_CALENDAR_EVENTS_URL}/${encodeURIComponent(existingGoogleEventId)}`
+    : GOOGLE_CALENDAR_EVENTS_URL;
+
+  const response = await fetch(url, {
+    method: existingGoogleEventId ? 'PATCH' : 'POST',
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(payload),
+  });
+
+  const googleEvent = await response.json();
+
+  if (!response.ok) {
+    console.error('Google event upsert failed:', googleEvent);
+    throw new Error(googleEvent.error?.message || 'Failed to save event to Google Calendar');
+  }
+
+  if (!existingGoogleEventId) {
+    calendarEvent.googleEventId = googleEvent.id;
+    await calendarEvent.save();
+  }
+
+  return googleEvent;
+};
+
+const deleteMiraeEventFromGoogle = async (userId, googleEventId) => {
+  if (!googleEventId) {
+    return;
+  }
+
+  const user = await User.findById(userId);
+  const accessToken = await getValidGoogleAccessToken(user);
+
+  if (!accessToken) {
+    return;
+  }
+
+  const response = await fetch(`${GOOGLE_CALENDAR_EVENTS_URL}/${encodeURIComponent(googleEventId)}`, {
+    method: 'DELETE',
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+    },
+  });
+
+  if (!response.ok && response.status !== 410 && response.status !== 404) {
+    const error = await response.json().catch(() => ({}));
+    console.error('Google event delete failed:', error);
+    throw new Error(error.error?.message || 'Failed to delete event from Google Calendar');
+  }
 };
 
 const getGoogleAuthUrl = async (req, res) => {
@@ -199,6 +345,8 @@ const createOrUpdateCalendarEvent = async (userId, googleEvent) => {
         location,
         googleEventId: googleEvent.id,
         userId,
+        source: 'google',
+        sourceId: googleEvent.id,
       },
     },
     { new: true, upsert: true, setDefaultsOnInsert: true }
@@ -216,35 +364,18 @@ const syncGoogleCalendar = async (req, res) => {
       return res.status(400).json({ error: 'Google Calendar is not connected' });
     }
 
-    let accessToken = user.googleAccessToken;
-    const now = Date.now();
+    const accessToken = await getValidGoogleAccessToken(user);
 
-    if (!accessToken || user.googleTokenExpiry <= now + 60000) {
-      const refreshed = await refreshGoogleAccessToken(user.googleRefreshToken);
-      accessToken = refreshed.access_token;
-      user.googleAccessToken = refreshed.access_token;
-      user.googleTokenExpiry = Date.now() + (refreshed.expires_in || 0) * 1000;
-      await user.save();
-    }
+    const localEventsToExport = await CalendarEvent.find({ userId: req.user.id });
+    const exportedEvents = await Promise.all(
+      localEventsToExport.map((event) => upsertMiraeEventToGoogle(req.user.id, event))
+    );
 
-    const timeMin = new Date().toISOString();
-    const timeMax = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
-    const response = await fetch(`${GOOGLE_CALENDAR_EVENTS_URL}?timeMin=${encodeURIComponent(timeMin)}&timeMax=${encodeURIComponent(timeMax)}&singleEvents=true&orderBy=startTime&maxResults=50`, {
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-      },
+    return res.status(200).json({
+      message: 'Google Calendar auto-sync checked',
+      exportedCount: exportedEvents.filter(Boolean).length,
+      syncedCount: exportedEvents.filter(Boolean).length,
     });
-
-    const data = await response.json();
-    if (!response.ok) {
-      console.error('Google events fetch failed:', data);
-      return res.status(500).json({ error: 'Failed to fetch Google Calendar events' });
-    }
-
-    const events = Array.isArray(data.items) ? data.items : [];
-    const syncedEvents = await Promise.all(events.map((event) => createOrUpdateCalendarEvent(user._id, event)));
-
-    return res.status(200).json({ message: 'Google Calendar synced', syncedCount: syncedEvents.length, events: syncedEvents });
   } catch (error) {
     console.error('Google sync error:', error);
     return res.status(500).json({ error: 'Failed to sync Google Calendar' });
@@ -256,4 +387,6 @@ module.exports = {
   handleGoogleCallback,
   getGoogleConnectionStatus,
   syncGoogleCalendar,
+  upsertMiraeEventToGoogle,
+  deleteMiraeEventFromGoogle,
 };
