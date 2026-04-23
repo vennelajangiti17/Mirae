@@ -38,7 +38,19 @@ const userSchema = new mongoose.Schema({
     title: String,
     url: String,
     icon: String,
-  }]
+  }],
+  googleRefreshToken: {
+    type: String,
+    default: '',
+  },
+  googleAccessToken: {
+    type: String,
+    default: '',
+  },
+  googleTokenExpiry: {
+    type: Number,
+    default: 0,
+  }
 }, {
   // Automatically manages 'createdAt' and 'updatedAt' fields
   timestamps: true,
