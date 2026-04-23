@@ -15,6 +15,7 @@ interface Application {
   stage: string;
   companyAcronym: string;
   imageUrl: string;
+  url: string;
   description: string;
   matchedSkills: string[];
   missingSkills: string[];
@@ -66,6 +67,7 @@ const mapJobToApplication = (job: any): Application => ({
   stage: job.status || 'Saved',
   companyAcronym: getCompanyAcronym(job.company || 'UC'),
   imageUrl: getCompanyFaviconUrl(job),
+  url: job.url || '',
   description: job.description || 'No job description provided.',
   matchedSkills: job.matchedSkills || [],
   missingSkills: job.missingSkills || [],
@@ -195,7 +197,18 @@ export function Dashboard() {
             </h3>
             <p className="text-sm text-[#14213D]">{app.company}</p>
           </div>
-          <ExternalLink className="w-4 h-4 text-[#14213D] opacity-40 hover:opacity-100 transition-opacity flex-shrink-0 ml-2" />
+          {app.url && (
+            <a
+              href={app.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={(e) => e.stopPropagation()}
+              className="flex-shrink-0 ml-2 p-1 rounded hover:bg-[#FCA311]/10 transition-colors"
+              title="Open original job listing"
+            >
+              <ExternalLink className="w-4 h-4 text-[#14213D] opacity-40 hover:opacity-100 transition-opacity" />
+            </a>
+          )}
         </div>
 
         <div className="flex items-center justify-between mt-4 gap-2">
