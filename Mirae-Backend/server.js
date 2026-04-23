@@ -1,3 +1,4 @@
+require("./dnsPatch");
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
@@ -10,6 +11,7 @@ const trackerRoutes = require('./routes/trackerRoutes');
 const profileRoutes = require('./routes/profileRoutes');
 const dashboardRoutes = require('./routes/dashboardRoutes');
 const analyticsRoutes = require('./routes/analyticsRoutes');
+const calendarRoutes = require('./routes/calendarRoutes');
 
 const app = express();
 
@@ -32,6 +34,7 @@ app.use('/api/tracker', trackerRoutes);
 app.use('/api/profile', profileRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/analytics', analyticsRoutes);
+app.use('/api/calendar', calendarRoutes);
 
 // Health Check
 app.get('/health', (req, res) => {

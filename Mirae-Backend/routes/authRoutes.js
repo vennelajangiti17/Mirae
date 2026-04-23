@@ -2,6 +2,8 @@ const express = require('express');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken'); // 🔐 Added for the "VIP Wristband"
 const User = require('../models/User');
+const { protect } = require('../middlewares/authMiddleware');
+const googleCalendarController = require('../controllers/googleCalendarController');
 
 const router = express.Router();
 
@@ -78,5 +80,10 @@ router.post('/login', async (req, res) => {
     return res.status(500).json({ error: 'Server error' });
   }
 });
+
+router.get('/google/url', protect, googleCalendarController.getGoogleAuthUrl);
+router.get('/google/status', protect, googleCalendarController.getGoogleConnectionStatus);
+router.post('/google/sync', protect, googleCalendarController.syncGoogleCalendar);
+router.get('/google/callback', googleCalendarController.handleGoogleCallback);
 
 module.exports = router;
