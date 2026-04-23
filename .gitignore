@@ -22,3 +22,6 @@ Thumbs.db
 .idea/
 node_modules/
 .env
+
+# uploads
+Mirae-Backend/uploads/
