@@ -23,8 +23,12 @@ const jobSchema = new mongoose.Schema({
 
   // 3. Smart Features (Populated later by your AI backend)
   matchScore: { type: Number, default: null }, // e.g., 88
-  matchedSkills: { type: [String], default: [] }, // Array of strings: ['React', 'Node.js']
-  missingSkills: { type: [String], default: [] }, // Array of strings: ['Docker', 'AWS']
+  skills: {
+    all: { type: [String], default: [] },
+    matched: { type: [String], default: [] },
+    missing: { type: [String], default: [] }
+  },
+  postedDate: { type: String, default: '' },
 
   // 4. Details (Can be scraped, or added manually later via your popup form)
   location: { type: String, default: '' },

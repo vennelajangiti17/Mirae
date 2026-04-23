@@ -47,43 +47,36 @@ exports.createJob = async (req, res) => {
     }
 
     const hasResume = !!(user.resumeText && user.resumeText.trim().length > 20);
+    // Grab the user's skills from the database (fallback to resume text or a default string)
+    const userProfileSkills = hasResume ? user.resumeText.substring(0, 3000) : "React, Node.js, MongoDB, JavaScript, Python";
 
-    // 2. Build the AI prompt
-    const systemPrompt = `You are an expert technical recruiter and data extractor.
-I will provide you with the raw text scraped from a job board webpage.
-Your job is to find the job details hidden in the text and return a strict JSON object.
+    // 2. The Omni-Extraction Prompt
+    const systemPrompt = `You are an expert technical recruiter and data extractor. 
+I will provide you with the raw text scraped from a job board webpage. 
+Your job is to find the job details and return a strict JSON object.
 
-RULES:
-- Extract the exact job title from the listing.
-- Extract the company name. If you cannot find it, check the URL domain I provide.
-- "requiredSkills" must ALWAYS list every technical skill, tool, language, and framework mentioned (e.g. Python, SQL, AWS, React, Docker, Kubernetes, etc). Extract ALL of them.
-- "description" should be a clean 2-3 paragraph summary of the role and its requirements.
-- "category" must be one of: "Jobs", "Hackathons", or "Others".
-- "location" should be the job location if mentioned, otherwise empty string.
-- "salaryRange" should be the salary/compensation if mentioned, otherwise empty string.
-- "deadline" should be the application deadline as an ISO date string if mentioned, otherwise null.
-${hasResume
-  ? `- Compare the required skills against the user's resume to calculate "matchScore" (0-100), "matchedSkills" (skills the user HAS), and "missingSkills" (skills the user LACKS).`
-  : `- The user has NO resume. Set "matchScore" to null, "matchedSkills" to [], and "missingSkills" to [].`
-}
+If you cannot find a specific detail, use "Not specified" or "Unknown".
 
-You MUST return ONLY valid JSON in this exact format, with no markdown formatting or extra text:
+CRITICAL INSTRUCTION: I will also provide the candidate's current skills. You must compare the job's required skills against the candidate's skills to calculate a Match Score (0-100). Furthermore, you must categorize the job's required skills into "matched" (skills the candidate has) and "missing" (skills the candidate lacks).
+
+Candidate's Current Skills: ${userProfileSkills}
+
+You MUST return ONLY valid JSON in this exact format:
 {
   "title": "Exact Job Title",
   "company": "Company Name",
-  "description": "Clean summary of the job",
-  "requiredSkills": ["skill1", "skill2"],
-  "matchScore": ${hasResume ? '85' : 'null'},
-  "matchedSkills": [],
-  "missingSkills": [],
-  "location": "",
-  "salaryRange": "",
-  "category": "Jobs",
-  "deadline": null
+  "location": "City, State or Remote",
+  "postedDate": "Date posted, e.g., 2 days ago or exact date",
+  "description": "A clean 2-paragraph summary of the job and requirements",
+  "matchScore": 85,
+  "skills": {
+    "all": ["skill1", "skill2", "skill3", "skill4"],
+    "matched": ["skill1", "skill2"],
+    "missing": ["skill3", "skill4"]
+  }
 }`;
 
     const userMessage = `Job URL: ${url}
-${hasResume ? `\nUser Resume (for match scoring):\n${user.resumeText.substring(0, 3000)}` : ''}
 
 Here is the webpage text:
 
@@ -93,15 +86,15 @@ ${rawText.substring(0, 6000)}`;
     let aiResult = {
       title: 'Untitled Position',
       company: companyFromUrl(url),
-      description: '',
-      requiredSkills: [],
-      matchScore: null,
-      matchedSkills: [],
-      missingSkills: [],
       location: '',
-      salaryRange: '',
-      category: 'Jobs',
-      deadline: null
+      postedDate: '',
+      description: '',
+      matchScore: null,
+      skills: {
+        all: [],
+        matched: [],
+        missing: []
+      }
     };
 
     try {
@@ -123,45 +116,38 @@ ${rawText.substring(0, 6000)}`;
       // Enforce null match score if no resume
       if (!hasResume) {
         aiResult.matchScore = null;
-        aiResult.matchedSkills = [];
-        aiResult.missingSkills = [];
+        if (aiResult.skills) {
+          aiResult.skills.matched = [];
+          aiResult.skills.missing = [];
+        }
       }
     } catch (aiError) {
       console.warn("⚠️ Groq AI failed. Saving with URL-based fallback.", aiError.message);
     }
 
-    // 4. Sanitize category
-    aiResult.category = normalizeCategory(aiResult.category);
-
-    // 5. Sanitize deadline
-    if (aiResult.deadline) {
-      const parsed = new Date(aiResult.deadline);
-      aiResult.deadline = isNaN(parsed.getTime()) ? null : parsed;
-    }
-
-    // 6. Fallback company from URL if AI also couldn't find it
-    const finalCompany = (aiResult.company && aiResult.company !== 'Unknown Company')
+    // 4. Fallback company from URL if AI also couldn't find it
+    const finalCompany = (aiResult.company && aiResult.company !== 'Unknown Company' && aiResult.company !== 'Unknown')
       ? aiResult.company
       : companyFromUrl(url);
 
-    // 7. Use requiredSkills as primary for the card
-    const skillsForCard = (aiResult.requiredSkills && aiResult.requiredSkills.length > 0)
-      ? aiResult.requiredSkills
-      : (aiResult.matchedSkills || []);
+    // 5. Ensure skills object is properly formatted
+    const safeSkills = {
+      all: aiResult.skills?.all || [],
+      matched: aiResult.skills?.matched || [],
+      missing: aiResult.skills?.missing || []
+    };
 
-    // 8. Build final document
+    // 6. Build final document
     const finalData = {
       title: aiResult.title || 'Untitled Position',
       company: finalCompany,
       url: url || 'https://unknown',
       description: aiResult.description || '',
       matchScore: aiResult.matchScore,
-      matchedSkills: skillsForCard,
-      missingSkills: aiResult.missingSkills || [],
+      skills: safeSkills,
       location: aiResult.location || '',
-      salaryRange: aiResult.salaryRange || '',
-      category: aiResult.category,
-      deadline: aiResult.deadline || null,
+      postedDate: aiResult.postedDate || '',
+      category: 'Jobs', // Omni prompt is mainly for jobs
       status: 'Saved',
       userId: req.user.id
     };
@@ -170,8 +156,7 @@ ${rawText.substring(0, 6000)}`;
       title: finalData.title,
       company: finalData.company,
       matchScore: finalData.matchScore,
-      category: finalData.category,
-      skills: finalData.matchedSkills?.length
+      skillsCount: finalData.skills?.all?.length
     });
 
     const newJob = new Job(finalData);

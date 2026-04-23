@@ -17,8 +17,13 @@ interface Application {
   imageUrl: string;
   url: string;
   description: string;
-  matchedSkills: string[];
-  missingSkills: string[];
+  location: string;
+  postedDate: string;
+  skills: {
+    all: string[];
+    matched: string[];
+    missing: string[];
+  };
 }
 
 const formatDate = (value?: string | null) => {
@@ -69,8 +74,13 @@ const mapJobToApplication = (job: any): Application => ({
   imageUrl: getCompanyFaviconUrl(job),
   url: job.url || '',
   description: job.description || 'No job description provided.',
-  matchedSkills: job.matchedSkills || [],
-  missingSkills: job.missingSkills || [],
+  location: job.location || 'Unknown Location',
+  postedDate: job.postedDate || 'Unknown Date',
+  skills: {
+    all: job.skills?.all || [],
+    matched: job.skills?.matched || job.matchedSkills || [],
+    missing: job.skills?.missing || job.missingSkills || []
+  }
 });
 
 export function Dashboard() {
