@@ -17,11 +17,20 @@ const userSchema = new mongoose.Schema({
     type: String,
     required: true,
   },
-  // 📄 NEW: This stores the text extracted from the user's resume
+  // 📄 Stores the text extracted from the user's resume
   // The AI will pull from here instead of using hardcoded details!
   resumeText: {
     type: String,
     default: "",
+  },
+  // 📁 Stores metadata about the uploaded resume file
+  resumeFileName: {
+    type: String,
+    default: "",
+  },
+  resumeUploadedAt: {
+    type: Date,
+    default: null,
   },
   socialLinks: [{
     id: String,

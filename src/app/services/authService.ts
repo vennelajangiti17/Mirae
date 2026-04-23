@@ -60,7 +60,27 @@ export const authService = {
     return data;
   },
 
-  // 2. Save the extracted text from a resume PDF to the database
+  // 2. Upload a resume file (PDF or TXT) — the backend parses it
+  async uploadResumeFile(file: File) {
+    const token = localStorage.getItem('token');
+    const formData = new FormData();
+    formData.append('resume', file);
+
+    const response = await fetch(`${PROFILE_URL}/resume/upload`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`
+        // Do NOT set Content-Type — the browser will set it with the boundary
+      },
+      body: formData,
+    });
+
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.error || 'Failed to upload resume');
+    return data;
+  },
+
+  // 2b. Save resume text directly (legacy — kept for backward compat)
   async updateResume(resumeText: string) {
     const response = await fetch(`${PROFILE_URL}/resume`, {
       method: 'PUT',
@@ -70,6 +90,21 @@ export const authService = {
 
     const data = await response.json();
     if (!response.ok) throw new Error(data.error || 'Failed to update resume');
+    return data;
+  },
+
+  // 2c. Delete the user's resume
+  async deleteResume() {
+    const token = localStorage.getItem('token');
+    const response = await fetch(`${PROFILE_URL}/resume`, {
+      method: 'DELETE',
+      headers: {
+        'Authorization': `Bearer ${token}`
+      },
+    });
+
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.error || 'Failed to delete resume');
     return data;
   },
 

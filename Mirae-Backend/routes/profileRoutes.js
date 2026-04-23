@@ -14,11 +14,25 @@ const { protect } = require('../middlewares/authMiddleware');
 router.get('/', protect, profileController.getProfile);
 
 /**
+ * @route   POST /api/profile/resume/upload
+ * @desc    Upload a resume file (PDF or TXT) — parses and extracts text
+ * @access  Private
+ */
+router.post('/resume/upload', protect, profileController.uploadMiddleware, profileController.uploadResume);
+
+/**
  * @route   PUT /api/profile/resume
- * @desc    Update/Save user's resume text for AI analysis
+ * @desc    Update/Save user's resume text for AI analysis (legacy JSON endpoint)
  * @access  Private
  */
 router.put('/resume', protect, profileController.updateResume);
+
+/**
+ * @route   DELETE /api/profile/resume
+ * @desc    Delete the user's uploaded resume
+ * @access  Private
+ */
+router.delete('/resume', protect, profileController.deleteResume);
 
 /**
  * @route   PUT /api/profile/social-links

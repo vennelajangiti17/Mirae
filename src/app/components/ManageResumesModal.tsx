@@ -1,76 +1,107 @@
-import { X, Upload, Star, Download, Edit2, Trash2, File } from 'lucide-react';
+import { X, Upload, Star, Trash2, File, FileText, CheckCircle } from 'lucide-react';
 import { motion } from 'motion/react';
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { authService } from '../services/authService'; // 👈 Import your service
+import { authService } from '../services/authService';
 
 interface Props {
   onClose: () => void;
 }
 
-interface Resume {
-  id: string;
+interface ResumeInfo {
   fileName: string;
-  tag: string;
-  date: string;
-  isPrimary: boolean;
+  uploadedAt: string;
+  charCount: number;
 }
 
 export function ManageResumesModal({ onClose }: Props) {
-  const fileInputRef = useRef<HTMLInputElement>(null); // 👈 For the hidden input
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [isUploading, setIsUploading] = useState(false);
-  const [resumes, setResumes] = useState<Resume[]>([
-    {
-      id: '1',
-      fileName: 'My_Resume.txt',
-      tag: 'General',
-      date: new Date().toLocaleDateString(),
-      isPrimary: true,
-    },
-  ]);
+  const [resumeInfo, setResumeInfo] = useState<ResumeInfo | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
-  // Handle the actual file upload and AI sync
+  // Load current resume info from the backend on mount
+  useEffect(() => {
+    const loadProfile = async () => {
+      try {
+        const profile = await authService.getProfile();
+        if (profile.resumeFileName && profile.resumeText) {
+          setResumeInfo({
+            fileName: profile.resumeFileName,
+            uploadedAt: profile.resumeUploadedAt
+              ? new Date(profile.resumeUploadedAt).toLocaleDateString('en-US', {
+                  month: 'short', day: 'numeric', year: 'numeric'
+                })
+              : 'Unknown date',
+            charCount: profile.resumeText.length,
+          });
+        }
+      } catch (err) {
+        console.error('Failed to load profile:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    loadProfile();
+  }, []);
+
+  // Handle file upload — sends the actual file to the backend for parsing
   const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
 
+    // Validate file type on the frontend too
+    const validTypes = ['application/pdf', 'text/plain'];
+    const validExtensions = ['.pdf', '.txt', '.md'];
+    const ext = '.' + file.name.split('.').pop()?.toLowerCase();
+
+    if (!validTypes.includes(file.type) && !validExtensions.includes(ext)) {
+      setError('Please upload a .pdf or .txt file.');
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      setError('File is too large. Maximum size is 5MB.');
+      return;
+    }
+
     try {
       setIsUploading(true);
+      setError('');
 
-      // 1. Read the text from the file
-      // NOTE: For PDFs, you'd usually do this on the backend or use a PDF library.
-      // For now, this works perfectly with .txt or .md files for testing!
-      const text = await file.text(); 
+      // Send the actual file to the backend — it handles PDF parsing
+      const result = await authService.uploadResumeFile(file);
 
-      // 2. Send that text to your new MongoDB field
-      await authService.updateResume(text);
+      setResumeInfo({
+        fileName: result.stats.fileName,
+        uploadedAt: new Date(result.stats.uploadedAt).toLocaleDateString('en-US', {
+          month: 'short', day: 'numeric', year: 'numeric'
+        }),
+        charCount: result.stats.charCount,
+      });
 
-      // 3. Update the UI list
-      const newResume: Resume = {
-        id: Math.random().toString(),
-        fileName: file.name,
-        tag: 'New Upload',
-        date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
-        isPrimary: true,
-      };
-
-      setResumes([newResume, ...resumes.map(r => ({ ...r, isPrimary: false }))]);
       alert("✨ Resume uploaded and AI Profile updated!");
 
-    } catch (error) {
-      console.error("Upload failed:", error);
-      alert("❌ Failed to update AI Profile. Is your backend running?");
+    } catch (err: any) {
+      console.error("Upload failed:", err);
+      setError(err.message || "Failed to upload resume. Is your backend running?");
     } finally {
       setIsUploading(false);
+      // Reset the input so the same file can be re-uploaded
+      if (fileInputRef.current) fileInputRef.current.value = '';
     }
   };
 
-  const togglePrimary = (id: string) => {
-    setResumes(resumes.map(r => ({
-      ...r,
-      isPrimary: r.id === id
-    })));
-    // In a real app, you'd also tell the backend which one is primary here.
+  const handleDelete = async () => {
+    if (!confirm('Are you sure you want to delete your resume? This will disable AI Match Scoring.')) return;
+
+    try {
+      await authService.deleteResume();
+      setResumeInfo(null);
+    } catch (err: any) {
+      setError(err.message || "Failed to delete resume.");
+    }
   };
 
   useEffect(() => {
@@ -105,62 +136,87 @@ export function ManageResumesModal({ onClose }: Props) {
           </div>
 
           <div className="flex-1 overflow-y-auto p-6">
+            {/* Upload Area */}
             <div className="mb-8">
-              {/* 🖱️ Clicking this div triggers the hidden input below */}
               <div 
-                onClick={() => fileInputRef.current?.click()}
+                onClick={() => !isUploading && fileInputRef.current?.click()}
                 className={`cursor-pointer rounded-md border-2 border-dashed p-8 text-center transition-colors 
                   ${isUploading ? 'border-gray-300 bg-gray-50' : 'border-[#E5E5E5] hover:border-[#FCA311]'}`}
               >
                 <Upload className={`mx-auto mb-3 h-8 w-8 ${isUploading ? 'animate-bounce text-gray-400' : 'text-[#14213D]'}`} />
                 
-                {/* Hidden Input */}
+                {/* Hidden File Input */}
                 <input 
                   type="file" 
                   ref={fileInputRef} 
                   className="hidden" 
-                  accept=".txt,.pdf,.md" 
+                  accept=".txt,.pdf,.md,application/pdf,text/plain" 
                   onChange={handleFileChange}
                 />
 
                 <button className="mb-2 rounded bg-[#FCA311] px-6 py-2 font-semibold text-[#000000] transition-all hover:bg-[#fdb748]">
-                  {isUploading ? 'Processing AI Profile...' : 'Upload Resume'}
+                  {isUploading ? 'Parsing & Uploading...' : 'Upload Resume'}
                 </button>
-                <p className="text-xs text-[#73766A]">Use a .txt or .pdf file. We'll extract the skills for your Match Score.</p>
+                <p className="text-xs text-[#73766A]">
+                  Supports <strong>.pdf</strong> and <strong>.txt</strong> files (max 5MB). We extract the text and use it for AI Match Scoring.
+                </p>
               </div>
             </div>
 
+            {/* Error Message */}
+            {error && (
+              <div className="mb-4 rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+                ❌ {error}
+              </div>
+            )}
+
+            {/* Resume List */}
             <div className="space-y-3">
-              <h3 className="mb-3 text-sm font-semibold text-[#14213D]">Your Resumes</h3>
-              {resumes.map((resume, index) => (
+              <h3 className="mb-3 text-sm font-semibold text-[#14213D]">Your Resume</h3>
+              
+              {loading ? (
+                <div className="py-8 text-center text-sm text-gray-400">Loading...</div>
+              ) : resumeInfo ? (
                 <motion.div
-                  key={resume.id}
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.3, delay: index * 0.1 }}
+                  transition={{ duration: 0.3 }}
                   className="rounded-md border border-[#E5E5E5] p-4 hover:border-[#FCA311]"
                 >
                   <div className="flex items-center gap-4">
-                    <div className="flex h-10 w-10 items-center justify-center rounded bg-[#E5E5E5]">
-                      <File className="h-5 w-5 text-[#14213D]" />
+                    <div className="flex h-10 w-10 items-center justify-center rounded bg-[#FFF3D6]">
+                      {resumeInfo.fileName.endsWith('.pdf') ? (
+                        <FileText className="h-5 w-5 text-[#FCA311]" />
+                      ) : (
+                        <File className="h-5 w-5 text-[#14213D]" />
+                      )}
                     </div>
                     <div className="min-w-0 flex-1">
-                      <div className="mb-1 truncate font-semibold text-[#000000]">{resume.fileName}</div>
+                      <div className="mb-1 truncate font-semibold text-[#000000]">{resumeInfo.fileName}</div>
                       <div className="flex items-center gap-2">
-                        <span className="rounded bg-[#14213D] px-2 py-1 text-xs text-white">{resume.tag}</span>
-                        <span className="text-xs text-[#73766A]">{resume.date}</span>
+                        <span className="rounded bg-[#14213D] px-2 py-1 text-xs text-white">
+                          AI Active
+                        </span>
+                        <span className="text-xs text-[#73766A]">{resumeInfo.uploadedAt}</span>
+                        <span className="text-xs text-[#73766A]">•</span>
+                        <span className="text-xs text-[#73766A]">{resumeInfo.charCount.toLocaleString()} chars</span>
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
-                      <button onClick={() => togglePrimary(resume.id)} className="rounded p-2 hover:bg-[#E5E5E5]">
-                        <Star className={`h-4 w-4 ${resume.isPrimary ? 'fill-[#FCA311] text-[#FCA311]' : 'text-[#E5E5E5]'}`} />
+                      <CheckCircle className="h-4 w-4 fill-green-500 text-white" />
+                      <button onClick={handleDelete} className="rounded p-2 hover:bg-[#E5E5E5]">
+                        <Trash2 className="h-4 w-4 text-[#E11D48]" />
                       </button>
-                      <button className="rounded p-2 hover:bg-[#E5E5E5]"><Download className="h-4 w-4 text-[#14213D]" /></button>
-                      <button className="rounded p-2 hover:bg-[#E5E5E5]"><Trash2 className="h-4 w-4 text-[#E11D48]" /></button>
                     </div>
                   </div>
                 </motion.div>
-              ))}
+              ) : (
+                <div className="rounded-md border border-dashed border-[#E5E5E5] py-8 text-center">
+                  <FileText className="mx-auto mb-2 h-8 w-8 text-gray-300" />
+                  <p className="text-sm text-gray-400">No resume uploaded yet.</p>
+                  <p className="text-xs text-gray-400 mt-1">Upload a resume to enable AI Match Scoring on saved jobs.</p>
+                </div>
+              )}
             </div>
           </div>
         </motion.div>
