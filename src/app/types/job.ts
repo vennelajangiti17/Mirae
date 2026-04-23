@@ -21,6 +21,7 @@ export interface Job {
   // 4. Details
   location: string;
   salaryRange: string;
+  tags?: string[];
   category: 'Jobs' | 'Hackathons' | 'Others';
   
   // 5. Timeline & Tracking
