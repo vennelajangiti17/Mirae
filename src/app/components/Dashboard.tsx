@@ -35,22 +35,26 @@ const getCompanyAcronym = (company: string) =>
     .slice(0, 2)
     .toUpperCase();
 
-// Try to get a real company logo from the job URL domain
-const getCompanyLogoUrl = (job: any): string => {
+// Generate a unique gradient for each company based on its name
+const getCompanyGradient = (company: string): string => {
+  let hash = 0;
+  for (let i = 0; i < company.length; i++) {
+    hash = company.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  const h1 = Math.abs(hash % 360);
+  const h2 = (h1 + 40) % 360;
+  return `linear-gradient(135deg, hsl(${h1}, 70%, 35%) 0%, hsl(${h2}, 80%, 25%) 100%)`;
+};
+
+// Get the Google favicon URL for a domain
+const getCompanyFaviconUrl = (job: any): string => {
   try {
     if (job.url && job.url.startsWith('http')) {
-      const hostname = new URL(job.url).hostname.replace('www.', '');
-      // Use logo.clearbit.com for real logos (e.g. amazon.jobs → amazon.com logo)
-      const domain = hostname.includes('.jobs') 
-        ? hostname.replace('.jobs', '.com')
-        : hostname;
-      return `https://logo.clearbit.com/${domain}`;
+      const hostname = new URL(job.url).hostname;
+      return `https://t1.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=https://${hostname}&size=64`;
     }
   } catch {}
-  // Fallback: styled initials avatar
-  return `https://ui-avatars.com/api/?name=${encodeURIComponent(
-    job.company || 'Company'
-  )}&background=14213D&color=FCA311&size=256&bold=true&font-size=0.4`;
+  return '';
 };
 
 const mapJobToApplication = (job: any): Application => ({
@@ -61,7 +65,7 @@ const mapJobToApplication = (job: any): Application => ({
   appliedDate: formatDate(job.appliedDate || job.createdAt),
   stage: job.status || 'Saved',
   companyAcronym: getCompanyAcronym(job.company || 'UC'),
-  imageUrl: getCompanyLogoUrl(job),
+  imageUrl: getCompanyFaviconUrl(job),
   description: job.description || 'No job description provided.',
   matchedSkills: job.matchedSkills || [],
   missingSkills: job.missingSkills || [],
@@ -157,18 +161,29 @@ export function Dashboard() {
           : ''
       }`}
     >
-      <div className="relative h-28 overflow-hidden">
-        <img
-          src={app.imageUrl}
-          alt={app.company}
-          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-          onError={(e) => {
-            // Fallback to initials avatar if logo fails to load
-            (e.target as HTMLImageElement).src = `https://ui-avatars.com/api/?name=${encodeURIComponent(app.company)}&background=14213D&color=FCA311&size=256&bold=true&font-size=0.4`;
-          }}
-        />
-        <div className="absolute top-3 right-3 w-10 h-10 bg-[#14213D] rounded-md flex items-center justify-center text-white font-bold text-sm shadow-md">
+      <div
+        className="relative h-28 overflow-hidden flex items-center justify-center"
+        style={{ background: getCompanyGradient(app.company) }}
+      >
+        <span className="text-white/20 font-bold text-5xl tracking-wider select-none">
           {app.companyAcronym}
+        </span>
+        <div className="absolute top-3 right-3 w-10 h-10 bg-white rounded-md flex items-center justify-center shadow-md overflow-hidden">
+          {app.imageUrl ? (
+            <img
+              src={app.imageUrl}
+              alt={app.company}
+              className="w-6 h-6 object-contain"
+              onError={(e) => {
+                // Hide img and show text fallback
+                (e.target as HTMLImageElement).style.display = 'none';
+                const parent = (e.target as HTMLImageElement).parentElement;
+                if (parent) parent.innerHTML = `<span class="text-[#14213D] font-bold text-sm">${app.companyAcronym}</span>`;
+              }}
+            />
+          ) : (
+            <span className="text-[#14213D] font-bold text-sm">{app.companyAcronym}</span>
+          )}
         </div>
       </div>
 
