@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { AnimatePresence } from 'motion/react';
 import { ProfilePopover } from './ProfilePopover';
 import { BrandLogo } from './BrandLogo';
+import { useUser } from '../contexts/UserContext';
 
 interface SidebarProps {
   onManageResumesOpen: () => void;
@@ -18,6 +19,7 @@ export function Sidebar({
 }: SidebarProps) {
   const location = useLocation();
   const [showProfilePopover, setShowProfilePopover] = useState(false);
+  const { user } = useUser();
 
   const navItems = [
     { name: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
@@ -25,6 +27,11 @@ export function Sidebar({
     { name: 'Calendar', path: '/calendar', icon: Calendar },
     { name: 'Settings', path: '/settings', icon: Settings },
   ];
+
+  // Get user initials for fallback
+  const getUserInitials = (name: string) => {
+    return name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
+  };
 
   return (
     <aside className="fixed left-0 top-0 h-screen w-60 bg-[#14213D] flex flex-col z-10 overflow-visible">
@@ -69,12 +76,21 @@ export function Sidebar({
           onClick={() => setShowProfilePopover(!showProfilePopover)}
           className="w-full flex items-center gap-3 p-3 rounded-md bg-[rgba(252,163,17,0.05)] hover:bg-[rgba(252,163,17,0.1)] transition-colors cursor-pointer"
         >
-          <div className="w-10 h-10 rounded-full bg-[#FCA311] flex items-center justify-center">
-            <User className="w-5 h-5 text-[#14213D]" />
+          {/* Profile Avatar */}
+          <div className="w-10 h-10 rounded-full bg-[#FCA311] flex items-center justify-center overflow-hidden">
+            {user?.profilePhoto ? (
+              <img
+                src={user.profilePhoto}
+                alt="Profile"
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              <User className="w-5 h-5 text-[#14213D]" />
+            )}
           </div>
           <div className="text-left">
             <div className="text-sm font-medium text-white">
-              {typeof window !== 'undefined' ? localStorage.getItem('userName') || 'Mirae User' : 'Mirae User'}
+              {user?.name || 'Mirae User'}
             </div>
             <div className="text-xs text-[#E5E5E5]">Job Seeker</div>
           </div>

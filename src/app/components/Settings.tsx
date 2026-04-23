@@ -9,6 +9,7 @@ import { authService } from '../services/authService';
 import { profileService } from '../services/profileService';
 import { clearAllApplicationData, getSettings, resetSettings, updateSettings, type SettingsData } from '../services/settingsService';
 import { setTheme } from '../hooks/useTheme';
+import { useUser } from '../contexts/UserContext';
 
 const defaultSettings: SettingsData = {
   notifications: {
@@ -117,6 +118,7 @@ function SectionCard({
 export function Settings() {
   const navigate = useNavigate();
   const photoInputRef = useRef<HTMLInputElement | null>(null);
+  const { user, refetchProfile } = useUser();
 
   const [settings, setSettings] = useState<SettingsData>(defaultSettings);
   const [loading, setLoading] = useState(true);
@@ -163,27 +165,17 @@ export function Settings() {
           console.error('Settings fetch failed:', error);
         }
 
-        try {
-          let profile = await profileService.getProfile();
-          if (!profile?.name || !profile?.email) {
-            profile = await authService.getProfile();
-          }
-
-          if (profile?.name) {
-            setName(profile.name);
-            setDraftName(profile.name);
-            window.localStorage.setItem('userName', profile.name);
-          }
-          if (profile?.email) {
-            setEmail(profile.email);
-            setDraftEmail(profile.email);
-            window.localStorage.setItem('userEmail', profile.email);
-          }
-          if (profile?.profilePhoto) {
-            setProfilePhoto(profile.profilePhoto);
-          }
-        } catch (error) {
-          console.error('Profile fetch failed:', error);
+        // Use user context data instead of fetching again
+        if (user?.name) {
+          setName(user.name);
+          setDraftName(user.name);
+        }
+        if (user?.email) {
+          setEmail(user.email);
+          setDraftEmail(user.email);
+        }
+        if (user?.profilePhoto) {
+          setProfilePhoto(user.profilePhoto);
         }
       } catch (error: any) {
         console.error('Failed to load settings', error);
@@ -194,7 +186,7 @@ export function Settings() {
     };
 
     load();
-  }, []);
+  }, [user]);
 
   useEffect(() => {
     if (typeof window === 'undefined' || !('Notification' in window)) {
@@ -284,6 +276,8 @@ export function Settings() {
       setIsUploadingPhoto(true);
       const photoUrl = await profileService.uploadPhoto(file);
       if (photoUrl) setProfilePhoto(photoUrl);
+      // Refetch profile to update global user context
+      await refetchProfile();
       toast.success('Profile photo updated.');
     } catch (error: any) {
       toast.error(error?.response?.data?.error || 'Failed to upload profile photo.');

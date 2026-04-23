@@ -29,9 +29,7 @@ export const profileService = {
     const formData = new FormData();
     formData.append('photo', file);
 
-    const { data } = await api.post<ProfileResponse>('/profile/upload-photo', formData, {
-      headers: { 'Content-Type': 'multipart/form-data' }
-    });
+    const { data } = await api.post<ProfileResponse>('/profile/upload-photo', formData);
 
     return data.profilePhoto || data.user.profilePhoto || '';
   },
