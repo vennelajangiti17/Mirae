@@ -30,9 +30,16 @@ interface Application {
   category: string;
   companyAcronym: string;
   imageUrl: string;
+  url: string;
   description: string;
-  matchedSkills: string[];
-  missingSkills: string[];
+  location: string;
+  postedDate: string;
+  salaryRange: string;
+  skills: {
+    all: string[];
+    matched: string[];
+    missing: string[];
+  };
 }
 
 interface SectionConfig {
@@ -57,20 +64,26 @@ const getCompanyAcronym = (company: string) =>
     .slice(0, 2)
     .toUpperCase();
 
-const getCompanyLogoUrl = (job: any): string => {
+// Generate a unique gradient for each company based on its name
+const getCompanyGradient = (company: string): string => {
+  let hash = 0;
+  for (let i = 0; i < company.length; i++) {
+    hash = company.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  const h1 = Math.abs(hash % 360);
+  const h2 = (h1 + 40) % 360;
+  return `linear-gradient(135deg, hsl(${h1}, 70%, 35%) 0%, hsl(${h2}, 80%, 25%) 100%)`;
+};
+
+// Get the Google favicon URL for a domain
+const getCompanyFaviconUrl = (job: any): string => {
   try {
     if (job.url && job.url.startsWith('http')) {
-      const hostname = new URL(job.url).hostname.replace('www.', '');
-      const domain = hostname.includes('.jobs')
-        ? hostname.replace('.jobs', '.com')
-        : hostname;
-      return `https://logo.clearbit.com/${domain}`;
+      const hostname = new URL(job.url).hostname;
+      return `https://t1.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=https://${hostname}&size=64`;
     }
   } catch {}
-
-  return `https://ui-avatars.com/api/?name=${encodeURIComponent(
-    job.company || 'Company'
-  )}&background=14213D&color=FCA311&size=256&bold=true&font-size=0.4`;
+  return '';
 };
 
 const mapJobToApplication = (job: any): Application => ({
@@ -82,10 +95,17 @@ const mapJobToApplication = (job: any): Application => ({
   stage: job.status || 'Saved',
   category: job.category || 'Jobs',
   companyAcronym: getCompanyAcronym(job.company || 'UC'),
-  imageUrl: getCompanyLogoUrl(job),
+  imageUrl: getCompanyFaviconUrl(job),
+  url: job.url || '',
   description: job.description || 'No job description provided.',
-  matchedSkills: job.matchedSkills || [],
-  missingSkills: job.missingSkills || [],
+  location: job.location || 'Unknown Location',
+  postedDate: job.postedDate || 'Unknown Date',
+  salaryRange: job.salaryRange || '',
+  skills: {
+    all: job.skills?.all || [],
+    matched: job.skills?.matched || job.matchedSkills || [],
+    missing: job.skills?.missing || job.missingSkills || []
+  }
 });
 
 const buildSummary = (apps: Application[]) => ({
@@ -320,6 +340,7 @@ export function Dashboard() {
           : ''
       }`}
     >
+<<<<<<< HEAD
       <div className="relative h-28 overflow-hidden rounded-t-md">
         <img
           src={app.imageUrl}
@@ -332,7 +353,31 @@ export function Dashboard() {
           }}
         />
         <div className="absolute top-3 right-3 w-10 h-10 bg-[#14213D] rounded-md flex items-center justify-center text-white font-bold text-sm shadow-md">
+=======
+      <div
+        className="relative h-28 overflow-hidden flex items-center justify-center"
+        style={{ background: getCompanyGradient(app.company) }}
+      >
+        <span className="text-white/20 font-bold text-5xl tracking-wider select-none">
+>>>>>>> BugFixes
           {app.companyAcronym}
+        </span>
+        <div className="absolute top-3 right-3 w-10 h-10 bg-white rounded-md flex items-center justify-center shadow-md overflow-hidden">
+          {app.imageUrl ? (
+            <img
+              src={app.imageUrl}
+              alt={app.company}
+              className="w-6 h-6 object-contain"
+              onError={(e) => {
+                // Hide img and show text fallback
+                (e.target as HTMLImageElement).style.display = 'none';
+                const parent = (e.target as HTMLImageElement).parentElement;
+                if (parent) parent.innerHTML = `<span class="text-[#14213D] font-bold text-sm">${app.companyAcronym}</span>`;
+              }}
+            />
+          ) : (
+            <span className="text-[#14213D] font-bold text-sm">{app.companyAcronym}</span>
+          )}
         </div>
       </div>
 
@@ -344,6 +389,7 @@ export function Dashboard() {
             </h3>
             <p className="text-sm text-[#14213D]">{app.company}</p>
           </div>
+<<<<<<< HEAD
           <a
             href="#"
             onClick={(e) => e.stopPropagation()}
@@ -351,6 +397,20 @@ export function Dashboard() {
           >
             <ExternalLink className="w-4 h-4 text-[#14213D] opacity-40 hover:opacity-100 transition-opacity" />
           </a>
+=======
+          {app.url && (
+            <a
+              href={app.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={(e) => e.stopPropagation()}
+              className="flex-shrink-0 ml-2 p-1 rounded hover:bg-[#FCA311]/10 transition-colors"
+              title="Open original job listing"
+            >
+              <ExternalLink className="w-4 h-4 text-[#14213D] opacity-40 hover:opacity-100 transition-opacity" />
+            </a>
+          )}
+>>>>>>> BugFixes
         </div>
 
         <div className="flex items-center justify-between mt-4 gap-3">
