@@ -5,7 +5,7 @@ const getAnalyticsOverview = async (req, res) => {
   try {
     const userId = req.user.id;
     const jobs = await Job.find({ userId }).select(
-      'status matchScore matchedSkills missingSkills company title createdAt'
+      'status matchScore skills matchedSkills missingSkills company title createdAt'
     );
 
     const totalJobs = jobs.length;
@@ -26,7 +26,8 @@ const getAnalyticsOverview = async (req, res) => {
 
     const skillCounts = {};
     jobs.forEach((job) => {
-      (job.matchedSkills || []).forEach((skill) => {
+      const matched = job.skills?.matched || job.matchedSkills || [];
+      matched.forEach((skill) => {
         skillCounts[skill] = (skillCounts[skill] || 0) + 1;
       });
     });

@@ -128,7 +128,7 @@ export function Dashboard() {
   const [selectedApp, setSelectedApp] = useState<Application | null>(null);
   const [activeTab, setActiveTab] = useState<DashboardTab>('jobs');
   const [showAddModal, setShowAddModal] = useState(false);
-  const [summary, setSummary] = useState<any>(null);
+  const [searchQuery, setSearchQuery] = useState('');
   const [applications, setApplications] = useState<Application[]>([]);
   const [loading, setLoading] = useState(true);
   const [menuOpenId, setMenuOpenId] = useState<string | null>(null);
@@ -143,7 +143,6 @@ export function Dashboard() {
           getRecentJobs(),
         ]);
 
-        setSummary(summaryData);
         setApplications((recentJobs || []).map(mapJobToApplication));
       } catch (error) {
         console.error('[Dashboard] Fetch error:', error);
@@ -187,7 +186,6 @@ export function Dashboard() {
 
       setApplications((currentApps) => {
         const nextApps = currentApps.filter((app) => app.id !== appId);
-        setSummary(buildSummary(nextApps));
 
         if (selectedApp?.id === appId) {
           setSelectedApp(null);
@@ -212,7 +210,6 @@ export function Dashboard() {
         const nextApps = currentApps.map(app => 
           app.id === appId ? { ...app, stage: newStatus } : app
         );
-        setSummary(buildSummary(nextApps));
         
         // Also update the selectedApp if it's currently open
         if (selectedApp?.id === appId) {
@@ -228,14 +225,25 @@ export function Dashboard() {
   };
 
   const filteredApps = useMemo(() => {
-    const categoryMap: Record<DashboardTab, string> = {
-      jobs: 'Jobs',
-      hackathons: 'Hackathons',
-      others: 'Others',
-    };
-
-    return applications.filter((app) => app.category === categoryMap[activeTab]);
-  }, [applications, activeTab]);
+    return applications.filter((app) => {
+      const cat = app.category || 'Jobs';
+      const matchesTab = 
+        activeTab === 'jobs' ? (cat === 'Jobs' || cat === 'Internships') :
+        activeTab === 'hackathons' ? (cat === 'Hackathons') :
+        (cat === 'Open Source' || cat === 'Other' || cat === 'Others');
+      
+      if (!matchesTab) return false;
+      
+      if (!searchQuery) return true;
+      
+      const q = searchQuery.toLowerCase();
+      return (
+        app.company.toLowerCase().includes(q) ||
+        app.role.toLowerCase().includes(q) ||
+        app.location.toLowerCase().includes(q)
+      );
+    });
+  }, [applications, activeTab, searchQuery]);
 
   const activeSummary = useMemo(() => buildSummary(filteredApps), [filteredApps]);
 
@@ -503,7 +511,9 @@ export function Dashboard() {
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-[#14213D] opacity-50" />
               <input
                 type="text"
-                placeholder="Search applications... CMD+K"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search applications..."
                 className="w-full rounded-md border border-[#E5E5E5] bg-white py-3 pl-12 pr-4 text-[#000000] focus:outline-none focus:ring-2 focus:ring-[#FCA311]"
               />
             </div>
@@ -591,7 +601,21 @@ export function Dashboard() {
         />
       )}
 
-      {showAddModal && <AddManualModal onClose={() => setShowAddModal(false)} />}
+      {showAddModal && (
+        <AddManualModal 
+          onClose={() => setShowAddModal(false)} 
+          onSuccess={() => {
+            void (async () => {
+              try {
+                const recentJobs = await getRecentJobs();
+                setApplications((recentJobs || []).map(mapJobToApplication));
+              } catch (err) {
+                console.error("Refresh error:", err);
+              }
+            })();
+          }}
+        />
+      )}
     </div>
   );
 }

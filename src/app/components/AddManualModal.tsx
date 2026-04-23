@@ -5,9 +5,10 @@ import { createPortal } from 'react-dom';
 
 interface Props {
   onClose: () => void;
+  onSuccess?: () => void;
 }
 
-export function AddManualModal({ onClose }: Props) {
+export function AddManualModal({ onClose, onSuccess }: Props) {
   const [selectedCategory, setSelectedCategory] = useState<'jobs' | 'hackathons' | 'others'>('jobs');
   const [title, setTitle] = useState('');
   const [company, setCompany] = useState('');
@@ -50,7 +51,7 @@ export function AddManualModal({ onClose }: Props) {
         throw new Error('Failed to save opportunity');
       }
 
-      alert('Successfully added to your pipeline! Please refresh the dashboard.');
+      onSuccess?.();
       onClose();
     } catch (error) {
       console.error(error);
