@@ -1,30 +1,29 @@
-// Leaves a hidden "fingerprint" on the webpage
+// content.js — Mirae Omni-Scraper
+// Instead of guessing CSS selectors for each job board,
+// we grab ALL visible text and let the AI extract the structured data.
+
 document.documentElement.setAttribute('data-mirae-installed', 'true');
 
-const getTextBySelector = (selectors) => {
-  for (let selector of selectors) {
-    const element = document.querySelector(selector);
-    if (element && element.innerText.trim() !== '') {
-      return element.innerText.trim();
-    }
-  }
-  return "Could not detect";
-};
-
 const scrapeAndSendToMirae = () => {
+  console.log("Mirae: Extracting raw page text...");
+
+  // Grab EVERYTHING visible on the page, collapse whitespace
+  let rawText = document.body.innerText.replace(/\s+/g, ' ').trim();
+
+  // Send the first 8000 characters — plenty of context for AI
+  // without footer/nav junk overwhelming it
   const jobData = {
-    title: getTextBySelector(['h1.top-card-layout__title', '.t-24.t-bold', 'h1', '.job-title']),
-    company: getTextBySelector(['.topcard__org-name-link', '.job-details-jobs-unified-top-card__company-name', '[data-cy="company-name"]', '.company-name']),
     url: window.location.href,
-    description: getTextBySelector(['.description__text', '.jobs-description__content', '#job-description', 'main', 'body']).substring(0, 4000)
+    rawText: rawText.substring(0, 8000)
   };
 
-  if (jobData.title === "Could not detect" && jobData.description.length < 50) {
-    alert("❌ Mirae: Couldn't find enough job data on this page.");
+  if (jobData.rawText.length < 100) {
+    alert("❌ Mirae: Page hasn't fully loaded yet. Please wait and try again.");
     return;
   }
 
-  // Send data to the background script instead of fetching directly
+  console.log(`Mirae: Captured ${jobData.rawText.length} chars from ${jobData.url}`);
+
   chrome.runtime.sendMessage(
     { action: "saveJob", data: jobData },
     (response) => {
@@ -34,11 +33,12 @@ const scrapeAndSendToMirae = () => {
       }
 
       if (response && response.success) {
-        const score = response.data.job.matchScore;
+        const job = response.data.job;
+        const score = job.matchScore;
         const scoreMsg = score !== null && score !== undefined
           ? ` with a Match Score of ${score}%`
           : `. Upload your resume on the dashboard to get a Match Score`;
-        alert(`✨ Success! "${jobData.title}" analyzed by AI and saved to Mirae${scoreMsg}!`);
+        alert(`✨ Success! "${job.title}" at ${job.company} saved to Mirae${scoreMsg}!`);
       } else {
         alert(`❌ Mirae Error: ${response ? response.error : 'Unknown error occurred.'}`);
       }

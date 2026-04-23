@@ -35,6 +35,24 @@ const getCompanyAcronym = (company: string) =>
     .slice(0, 2)
     .toUpperCase();
 
+// Try to get a real company logo from the job URL domain
+const getCompanyLogoUrl = (job: any): string => {
+  try {
+    if (job.url && job.url.startsWith('http')) {
+      const hostname = new URL(job.url).hostname.replace('www.', '');
+      // Use logo.clearbit.com for real logos (e.g. amazon.jobs → amazon.com logo)
+      const domain = hostname.includes('.jobs') 
+        ? hostname.replace('.jobs', '.com')
+        : hostname;
+      return `https://logo.clearbit.com/${domain}`;
+    }
+  } catch {}
+  // Fallback: styled initials avatar
+  return `https://ui-avatars.com/api/?name=${encodeURIComponent(
+    job.company || 'Company'
+  )}&background=14213D&color=FCA311&size=256&bold=true&font-size=0.4`;
+};
+
 const mapJobToApplication = (job: any): Application => ({
   id: job._id,
   company: job.company || 'Unknown Company',
@@ -43,9 +61,7 @@ const mapJobToApplication = (job: any): Application => ({
   appliedDate: formatDate(job.appliedDate || job.createdAt),
   stage: job.status || 'Saved',
   companyAcronym: getCompanyAcronym(job.company || 'UC'),
-  imageUrl: `https://ui-avatars.com/api/?name=${encodeURIComponent(
-    job.company || 'Company'
-  )}&background=14213D&color=fff&size=256`,
+  imageUrl: getCompanyLogoUrl(job),
   description: job.description || 'No job description provided.',
   matchedSkills: job.matchedSkills || [],
   missingSkills: job.missingSkills || [],
@@ -146,6 +162,10 @@ export function Dashboard() {
           src={app.imageUrl}
           alt={app.company}
           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+          onError={(e) => {
+            // Fallback to initials avatar if logo fails to load
+            (e.target as HTMLImageElement).src = `https://ui-avatars.com/api/?name=${encodeURIComponent(app.company)}&background=14213D&color=FCA311&size=256&bold=true&font-size=0.4`;
+          }}
         />
         <div className="absolute top-3 right-3 w-10 h-10 bg-[#14213D] rounded-md flex items-center justify-center text-white font-bold text-sm shadow-md">
           {app.companyAcronym}

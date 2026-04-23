@@ -1,8 +1,8 @@
 const Job = require('../models/Job');
 const User = require('../models/User');
-const { GoogleGenerativeAI } = require("@google/generative-ai");
+const Groq = require('groq-sdk');
 
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
 
 // Helper: Normalize category to match Mongoose enum exactly
 const normalizeCategory = (raw) => {
@@ -14,155 +14,176 @@ const normalizeCategory = (raw) => {
   return 'Jobs';
 };
 
-// Logic to handle the AI analysis and saving
+// Helper: Extract company name from URL as last resort
+const companyFromUrl = (url) => {
+  try {
+    const hostname = new URL(url).hostname.replace('www.', '');
+    const name = hostname.split('.')[0];
+    return name.charAt(0).toUpperCase() + name.slice(1);
+  } catch {
+    return 'Unknown Company';
+  }
+};
+
+// Main handler: AI analysis via Groq (Llama 3) + save
 exports.createJob = async (req, res) => {
   try {
     const incomingData = req.body;
-    console.log("📥 Tracker received:", { title: incomingData.title, company: incomingData.company, url: incomingData.url?.substring(0, 60) });
 
-    // 1. DYNAMIC FETCH: Get the user's actual resume from the DB
+    // Support BOTH old format (title/company/description) and new omni-scraper format (rawText)
+    const rawText = incomingData.rawText || incomingData.description || '';
+    const url = incomingData.url || '';
+
+    console.log("📥 Tracker received:", { url: url.substring(0, 60), textLength: rawText.length });
+
+    if (rawText.length < 50) {
+      return res.status(400).json({ error: "Not enough text captured from the page. Try refreshing and scraping again." });
+    }
+
+    // 1. Fetch user's resume from DB
     const user = await User.findById(req.user.id);
     if (!user) {
       return res.status(401).json({ error: "User not found. Please log in again." });
     }
 
-    // 2. Initialize Gemini 2.5-flash
-    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+    const hasResume = !!(user.resumeText && user.resumeText.trim().length > 20);
 
-    const hasResume = !!(user.resumeText && user.resumeText.trim().length > 0);
+    // 2. Build the AI prompt
+    const systemPrompt = `You are an expert technical recruiter and data extractor.
+I will provide you with the raw text scraped from a job board webpage.
+Your job is to find the job details hidden in the text and return a strict JSON object.
 
-    const prompt = `
-      You are an expert job analyzer. Analyze this job listing and extract structured data.
-      
-      IMPORTANT RULES:
-      - Return ONLY a raw JSON object. No markdown. No backticks. No explanations.
-      - "requiredSkills" should ALWAYS list the technical skills, tools, languages, and frameworks mentioned in the job description (e.g. Python, SQL, AWS, React, Docker, etc.). This is NOT dependent on the user's resume. Always extract these.
-      - "companyName" should be the hiring company name. Extract it from the job description, URL domain, or "About Us" section. For example, if the URL contains "amazon.jobs", the company is "Amazon".
-      - "jobTitle" should be the clean, standardized job title from the listing.
-      ${hasResume 
-        ? '- Compare the job requirements against the user resume to calculate matchScore (0-100), matchedSkills (skills the user HAS from requiredSkills), and missingSkills (skills from requiredSkills the user LACKS).' 
-        : '- The user has NO resume uploaded. Set matchScore to null. Set matchedSkills to []. Set missingSkills to [].'}
+RULES:
+- Extract the exact job title from the listing.
+- Extract the company name. If you cannot find it, check the URL domain I provide.
+- "requiredSkills" must ALWAYS list every technical skill, tool, language, and framework mentioned (e.g. Python, SQL, AWS, React, Docker, Kubernetes, etc). Extract ALL of them.
+- "description" should be a clean 2-3 paragraph summary of the role and its requirements.
+- "category" must be one of: "Jobs", "Hackathons", or "Others".
+- "location" should be the job location if mentioned, otherwise empty string.
+- "salaryRange" should be the salary/compensation if mentioned, otherwise empty string.
+- "deadline" should be the application deadline as an ISO date string if mentioned, otherwise null.
+${hasResume
+  ? `- Compare the required skills against the user's resume to calculate "matchScore" (0-100), "matchedSkills" (skills the user HAS), and "missingSkills" (skills the user LACKS).`
+  : `- The user has NO resume. Set "matchScore" to null, "matchedSkills" to [], and "missingSkills" to [].`
+}
 
-      Return this exact JSON structure:
-      {
-        "companyName": "<company name>",
-        "jobTitle": "<clean job title>",
-        "matchScore": ${hasResume ? '<number 0-100>' : 'null'},
-        "requiredSkills": ["<skill1>", "<skill2>", "..."],
-        "matchedSkills": [${hasResume ? '"<skills user has>"' : ''}],
-        "missingSkills": [${hasResume ? '"<skills user lacks>"' : ''}],
-        "location": "<location or empty string>",
-        "salaryRange": "<salary range or empty string>",
-        "category": "<Jobs or Hackathons or Others>",
-        "deadline": "<ISO date string or null>"
-      }
+You MUST return ONLY valid JSON in this exact format, with no markdown formatting or extra text:
+{
+  "title": "Exact Job Title",
+  "company": "Company Name",
+  "description": "Clean summary of the job",
+  "requiredSkills": ["skill1", "skill2"],
+  "matchScore": ${hasResume ? '85' : 'null'},
+  "matchedSkills": [],
+  "missingSkills": [],
+  "location": "",
+  "salaryRange": "",
+  "category": "Jobs",
+  "deadline": null
+}`;
 
-      Job URL: ${incomingData.url || 'unknown'}
-      Job Title (scraped): ${incomingData.title || 'unknown'}
-      Company (scraped): ${incomingData.company || 'unknown'}
-      
-      Job Description:
-      ${(incomingData.description || '').substring(0, 4000)}
+    const userMessage = `Job URL: ${url}
+${hasResume ? `\nUser Resume (for match scoring):\n${user.resumeText.substring(0, 3000)}` : ''}
 
-      ${hasResume ? `User Resume:\n${user.resumeText.substring(0, 3000)}` : 'User Resume: NO_RESUME_PROVIDED'}
-    `;
+Here is the webpage text:
 
-    // 3. Run AI Analysis
-    let aiAnalysis = { 
-      companyName: '',
-      jobTitle: '',
-      matchScore: null, 
+${rawText.substring(0, 6000)}`;
+
+    // 3. Call Groq AI (Llama 3 — fast, free, guaranteed JSON)
+    let aiResult = {
+      title: 'Untitled Position',
+      company: companyFromUrl(url),
+      description: '',
       requiredSkills: [],
-      matchedSkills: [], 
-      missingSkills: [], 
-      location: '', 
-      salaryRange: '', 
-      category: 'Jobs', 
-      deadline: null 
+      matchScore: null,
+      matchedSkills: [],
+      missingSkills: [],
+      location: '',
+      salaryRange: '',
+      category: 'Jobs',
+      deadline: null
     };
 
     try {
-      const result = await model.generateContent(prompt);
-      let aiText = result.response.text().replace(/```json/g, '').replace(/```/g, '').trim();
-      console.log("🤖 Gemini raw response:", aiText.substring(0, 300));
-      aiAnalysis = JSON.parse(aiText);
-      
-      // Enforce null match score if no resume is present
+      console.log("🧠 Calling Groq AI (Llama 3)...");
+      const chatCompletion = await groq.chat.completions.create({
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: userMessage }
+        ],
+        model: "llama-3.3-70b-versatile",
+        response_format: { type: "json_object" }, // Forces perfect JSON output!
+        temperature: 0.2,
+      });
+
+      const aiText = chatCompletion.choices[0].message.content;
+      console.log("🤖 Groq raw response:", aiText.substring(0, 300));
+      aiResult = JSON.parse(aiText);
+
+      // Enforce null match score if no resume
       if (!hasResume) {
-        aiAnalysis.matchScore = null;
-        aiAnalysis.matchedSkills = [];
-        aiAnalysis.missingSkills = [];
+        aiResult.matchScore = null;
+        aiResult.matchedSkills = [];
+        aiResult.missingSkills = [];
       }
     } catch (aiError) {
-      console.warn("⚠️ Gemini AI failed. Saving job without AI insights.", aiError.message);
+      console.warn("⚠️ Groq AI failed. Saving with URL-based fallback.", aiError.message);
     }
 
-    // 4. SANITIZE: Fix category to match Mongoose enum
-    aiAnalysis.category = normalizeCategory(aiAnalysis.category);
+    // 4. Sanitize category
+    aiResult.category = normalizeCategory(aiResult.category);
 
-    // 5. SANITIZE: Fix deadline
-    if (aiAnalysis.deadline) {
-      const parsed = new Date(aiAnalysis.deadline);
-      aiAnalysis.deadline = isNaN(parsed.getTime()) ? null : parsed;
+    // 5. Sanitize deadline
+    if (aiResult.deadline) {
+      const parsed = new Date(aiResult.deadline);
+      aiResult.deadline = isNaN(parsed.getTime()) ? null : parsed;
     }
 
-    // 6. Use AI-extracted company/title as fallback when scraper fails
-    let finalCompany = incomingData.company;
-    if (!finalCompany || finalCompany === 'Could not detect') {
-      if (aiAnalysis.companyName) {
-        finalCompany = aiAnalysis.companyName;
-      } else {
-        // Ultimate fallback: extract from URL if AI also failed (e.g. due to 503 error)
-        try {
-          const urlObj = new URL(incomingData.url);
-          const hostnameParts = urlObj.hostname.replace('www.', '').split('.');
-          finalCompany = hostnameParts[0].charAt(0).toUpperCase() + hostnameParts[0].slice(1);
-        } catch (e) {
-          finalCompany = 'Unknown Company';
-        }
-      }
-    }
+    // 6. Fallback company from URL if AI also couldn't find it
+    const finalCompany = (aiResult.company && aiResult.company !== 'Unknown Company')
+      ? aiResult.company
+      : companyFromUrl(url);
 
-    const finalTitle = (incomingData.title && incomingData.title !== 'Could not detect')
-      ? incomingData.title
-      : (aiAnalysis.jobTitle || 'Untitled Position');
+    // 7. Use requiredSkills as primary for the card
+    const skillsForCard = (aiResult.requiredSkills && aiResult.requiredSkills.length > 0)
+      ? aiResult.requiredSkills
+      : (aiResult.matchedSkills || []);
 
-    // 7. Use requiredSkills as the primary skills list for the job card
-    // matchedSkills = skills the job requires (shown on card)
-    // missingSkills = skills user lacks (shown in detail drawer)
-    const skillsForCard = (aiAnalysis.requiredSkills && aiAnalysis.requiredSkills.length > 0) 
-      ? aiAnalysis.requiredSkills 
-      : (aiAnalysis.matchedSkills || []);
-
-    // 8. SECURE MERGE
-    const finalData = { 
-      title: finalTitle,
+    // 8. Build final document
+    const finalData = {
+      title: aiResult.title || 'Untitled Position',
       company: finalCompany,
-      url: incomingData.url || 'https://unknown',
-      description: incomingData.description || '',
-      matchScore: aiAnalysis.matchScore,
+      url: url || 'https://unknown',
+      description: aiResult.description || '',
+      matchScore: aiResult.matchScore,
       matchedSkills: skillsForCard,
-      missingSkills: aiAnalysis.missingSkills || [],
-      location: aiAnalysis.location || incomingData.location || '',
-      salaryRange: aiAnalysis.salaryRange || incomingData.salaryRange || '',
-      category: aiAnalysis.category,
-      deadline: aiAnalysis.deadline || null,
+      missingSkills: aiResult.missingSkills || [],
+      location: aiResult.location || '',
+      salaryRange: aiResult.salaryRange || '',
+      category: aiResult.category,
+      deadline: aiResult.deadline || null,
       status: 'Saved',
       userId: req.user.id
     };
 
-    console.log("💾 Saving job:", { title: finalData.title, company: finalData.company, matchScore: finalData.matchScore, category: finalData.category, skills: finalData.matchedSkills?.length });
+    console.log("💾 Saving job:", {
+      title: finalData.title,
+      company: finalData.company,
+      matchScore: finalData.matchScore,
+      category: finalData.category,
+      skills: finalData.matchedSkills?.length
+    });
 
     const newJob = new Job(finalData);
     await newJob.save();
 
     console.log("✅ Job saved successfully! ID:", newJob._id);
 
-    res.status(201).json({ 
-      message: aiAnalysis.matchScore !== null 
-        ? "AI Analysis Complete and Personalized!" 
-        : "Job saved! Upload a resume to get Match Scores.", 
-      job: newJob 
+    res.status(201).json({
+      message: aiResult.matchScore !== null
+        ? "AI Analysis Complete and Personalized!"
+        : "Job saved! Upload a resume to get Match Scores.",
+      job: newJob
     });
 
   } catch (error) {
@@ -172,7 +193,7 @@ exports.createJob = async (req, res) => {
   }
 };
 
-// Logic to get all jobs (Secure Dashboard Fetch)
+// Get all jobs (Secure Dashboard Fetch)
 exports.getAllJobs = async (req, res) => {
   try {
     const jobs = await Job.find({ userId: req.user.id }).sort({ createdAt: -1 });
