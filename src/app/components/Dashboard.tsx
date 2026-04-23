@@ -376,7 +376,7 @@ export function Dashboard() {
 
   const currentSummaryText =
     activeTab === 'jobs'
-      ? `Total Jobs: ${activeSummary.totalJobs} | Saved: ${activeSummary.saved} | Applied: ${activeSummary.applied} | Interviewing: ${activeSummary.interviewing} | Offers: ${activeSummary.offers} | Rejected: ${activeSummary.rejected}`
+      ? `Total Jobs: ${activeSummary.totalJobs} | Saved: ${activeSummary.saved} | Applied / Interviewing: ${activeSummary.applied + activeSummary.interviewing} | Offers: ${activeSummary.offers} | Rejected: ${activeSummary.rejected}`
       : activeTab === 'hackathons'
       ? `Total Hackathons/Contests: ${filteredApps.length} | Saved: ${hackathonSections[0].apps.length} | Registered: ${hackathonSections[1].apps.length}`
       : `Total Others: ${filteredApps.length} | Saved: ${othersSections[0].apps.length}`;

@@ -118,16 +118,10 @@ export function Analytics() {
         color: '#6b7280',
       },
       {
-        label: 'Applied',
-        value: overview?.applied ?? 0,
-        percent: calcPercent(overview?.applied ?? 0),
+        label: 'Applied / Interviewing',
+        value: (overview?.applied ?? 0) + (overview?.interviewing ?? 0),
+        percent: calcPercent((overview?.applied ?? 0) + (overview?.interviewing ?? 0)),
         color: '#14213D',
-      },
-      {
-        label: 'Interviewing',
-        value: overview?.interviewing ?? 0,
-        percent: calcPercent(overview?.interviewing ?? 0),
-        color: '#3b82f6',
       },
       {
         label: 'Offer',
@@ -223,7 +217,7 @@ export function Analytics() {
               APPLIED
             </div>
             <div className="text-4xl font-bold text-[#000000] mb-3 leading-none">
-              {overview?.applied ?? 0}
+              {(overview?.applied ?? 0) + (overview?.interviewing ?? 0)}
             </div>
             <div className="inline-flex items-center px-3 py-1.5 bg-[#FEF3C7] rounded-full">
               <span className="text-xs font-semibold text-[#92400E]">
