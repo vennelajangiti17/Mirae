@@ -11,8 +11,4 @@ router.put('/:id/status', protect, trackerController.updateJobStatus);
 router.put('/:id/contacts', protect, trackerController.updateJobContacts);
 router.put('/:id/notes', protect, trackerController.updateJobNotes);
 
-// AI Features
-router.post('/ai/cold-message', protect, trackerController.draftColdMessage);
-router.post('/ai/tailor-bullet', protect, trackerController.tailorBullet);
-
 module.exports = router;
