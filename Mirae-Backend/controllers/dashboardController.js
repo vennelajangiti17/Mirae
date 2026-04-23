@@ -38,12 +38,19 @@ const getDashboardSummary = async (req, res) => {
 const getRecentJobs = async (req, res) => {
   try {
     const sortBy = req.query.sortBy === 'matchScore' ? 'matchScore' : 'newest';
+    const search = typeof req.query.search === 'string' ? req.query.search.trim() : '';
+
+    const query = { userId: req.user.id };
+    if (search) {
+      query.$text = { $search: search };
+    }
+
     const sortField =
       sortBy === 'matchScore'
         ? { status: 1, matchScore: -1, createdAt: -1 }
         : { status: 1, createdAt: -1 };
 
-    const recentJobs = await Job.find({ userId: req.user.id })
+    const recentJobs = await Job.find(query)
       .sort(sortField)
       .limit(50)
       .select(
@@ -52,6 +59,7 @@ const getRecentJobs = async (req, res) => {
 
     res.status(200).json(recentJobs);
   } catch (error) {
+    console.error('[Dashboard API] Recent jobs error:', error);
     res.status(500).json({ error: 'Failed to fetch recent jobs' });
   }
 };

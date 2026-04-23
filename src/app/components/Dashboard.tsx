@@ -5,6 +5,7 @@ import {
   Clock,
   MoreVertical,
   Trash2,
+  ArrowUpDown,
 } from 'lucide-react';
 import { motion } from 'motion/react';
 import { useEffect, useMemo, useState } from 'react';
@@ -146,7 +147,7 @@ export function Dashboard() {
       try {
         const [, recentJobs] = await Promise.all([
           getDashboardSummary(),
-          getRecentJobs(sortBy),
+          getRecentJobs(sortBy, searchQuery),
         ]);
 
         setApplications((recentJobs || []).map(mapJobToApplication));
@@ -163,7 +164,7 @@ export function Dashboard() {
     }
 
     loadDashboard();
-  }, [sortBy]);
+  }, [sortBy, searchQuery]);
 
   useEffect(() => {
     const closeMenu = () => setMenuOpenId(null);
@@ -229,24 +230,13 @@ export function Dashboard() {
 
   const filteredApps = useMemo(() => {
     return applications.filter((app) => {
-      const matchesTab =
-        activeTab === 'jobs'
-          ? app.category === 'Jobs'
-          : activeTab === 'hackathons'
-          ? app.category === 'Hackathons'
-          : app.category === 'Others';
-
-      if (!matchesTab) return false;
-      if (!searchQuery) return true;
-
-      const q = searchQuery.toLowerCase();
-      return (
-        app.company.toLowerCase().includes(q) ||
-        app.role.toLowerCase().includes(q) ||
-        app.location.toLowerCase().includes(q)
-      );
+      return activeTab === 'jobs'
+        ? app.category === 'Jobs'
+        : activeTab === 'hackathons'
+        ? app.category === 'Hackathons'
+        : app.category === 'Others';
     });
-  }, [applications, activeTab, searchQuery]);
+  }, [applications, activeTab]);
 
   const activeSummary = useMemo(() => buildSummary(filteredApps), [filteredApps]);
 
@@ -548,9 +538,9 @@ export function Dashboard() {
           <button
             type="button"
             onClick={handleSortToggle}
-            className="inline-flex items-center gap-2 rounded-md bg-[#14213D] px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-[#1f335c]"
+            className="inline-flex items-center gap-2 rounded-md border border-[#D5D9E2] bg-white px-4 py-2 text-sm font-semibold text-[#14213D] shadow-sm transition-colors hover:border-[#FCA311] hover:bg-[#FFF9F0]"
           >
-            <span>{sortBy === 'newest' ? '✨' : '🕒'}</span>
+            <ArrowUpDown className="h-4 w-4 text-[#6B7280]" />
             <span>{sortButtonLabel}</span>
           </button>
         </div>
@@ -598,7 +588,7 @@ export function Dashboard() {
           onSuccess={() => {
             void (async () => {
               try {
-                const recentJobs = await getRecentJobs(sortBy);
+                const recentJobs = await getRecentJobs(sortBy, searchQuery);
                 setApplications((recentJobs || []).map(mapJobToApplication));
               } catch (err) {
                 console.error("Refresh error:", err);
