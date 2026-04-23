@@ -4,7 +4,17 @@
 
 document.documentElement.setAttribute('data-mirae-installed', 'true');
 
+let isSavingToMirae = false;
+let lastSaveStartedAt = 0;
+
 const scrapeAndSendToMirae = () => {
+  if (isSavingToMirae && Date.now() - lastSaveStartedAt < 10000) {
+    alert('⏳ Mirae: This page is already being saved. Please wait a moment.');
+    return;
+  }
+
+  isSavingToMirae = true;
+  lastSaveStartedAt = Date.now();
   console.log("Mirae: Extracting raw page text...");
 
   // Grab EVERYTHING visible on the page, collapse whitespace
@@ -18,6 +28,7 @@ const scrapeAndSendToMirae = () => {
   };
 
   if (jobData.rawText.length < 100) {
+    isSavingToMirae = false;
     alert("❌ Mirae: Page hasn't fully loaded yet. Please wait and try again.");
     return;
   }
@@ -28,6 +39,7 @@ const scrapeAndSendToMirae = () => {
     { action: "saveJob", data: jobData },
     (response) => {
       if (chrome.runtime.lastError) {
+        isSavingToMirae = false;
         alert("❌ Mirae Error: Extension disconnected. Please refresh the page and try again.");
         return;
       }
@@ -47,6 +59,8 @@ const scrapeAndSendToMirae = () => {
       } else {
         alert(`❌ Mirae Error: ${response ? response.error : 'Unknown error occurred.'}`);
       }
+
+      isSavingToMirae = false;
     }
   );
 };

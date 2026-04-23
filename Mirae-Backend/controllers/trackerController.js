@@ -554,6 +554,43 @@ ${rawText.substring(0, 6000)}`;
       deadline: finalData.deadline
     });
 
+    const existingJob = await Job.findOne({
+      userId: req.user.id,
+      url: finalData.url,
+    }).sort({ updatedAt: -1 });
+
+    if (existingJob) {
+      const history = Array.isArray(existingJob.history) ? [...existingJob.history] : [];
+      const lastStatus = history.length ? history[history.length - 1]?.status : existingJob.status;
+      if (finalStatus && lastStatus !== finalStatus) {
+        history.push({ status: finalStatus, date: createdAt });
+      }
+
+      existingJob.title = finalData.title;
+      existingJob.company = finalData.company;
+      existingJob.description = finalData.description;
+      existingJob.matchScore = finalData.matchScore;
+      existingJob.skills = finalData.skills;
+      existingJob.location = finalData.location;
+      existingJob.postedDate = finalData.postedDate;
+      existingJob.salary = finalData.salary;
+      existingJob.deadline = finalData.deadline;
+      existingJob.category = finalData.category;
+      existingJob.status = finalData.status;
+      existingJob.appliedDate = finalData.appliedDate || existingJob.appliedDate;
+      existingJob.history = history;
+      existingJob.updatedAt = createdAt;
+
+      await existingJob.save();
+
+      console.log("♻️ Existing job refreshed successfully! ID:", existingJob._id);
+
+      return res.status(200).json({
+        message: 'This job was already saved. Mirae refreshed its details.',
+        job: existingJob,
+      });
+    }
+
     const newJob = new Job(finalData);
     await newJob.save();
 
@@ -652,7 +689,7 @@ exports.updateJobContacts = async (req, res) => {
           },
         },
       },
-      { new: true }
+      { returnDocument: 'after' }
     );
 
     if (!job) {
@@ -679,7 +716,7 @@ exports.updateJobNotes = async (req, res) => {
           notes,
         },
       },
-      { new: true }
+      { returnDocument: 'after' }
     );
 
     if (!job) {
