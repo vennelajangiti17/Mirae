@@ -136,15 +136,21 @@ ${rawText.substring(0, 6000)}`;
 
     // 5. Ensure skills object is properly formatted (defensive parsing)
     let safeSkills = { all: [], matched: [], missing: [] };
+    const ensureArray = (val) => {
+      if (Array.isArray(val)) return val.filter(v => typeof v === 'string');
+      if (typeof val === 'string') return val.split(',').map(s => s.trim()).filter(Boolean);
+      return [];
+    };
+
     if (aiResult.skills) {
       if (Array.isArray(aiResult.skills)) {
         // Groq hallucinated a flat array instead of an object
-        safeSkills.all = aiResult.skills;
-        safeSkills.missing = aiResult.skills; // Assume missing if not categorized
+        safeSkills.all = ensureArray(aiResult.skills);
+        safeSkills.missing = ensureArray(aiResult.skills); // Assume missing if not categorized
       } else {
-        safeSkills.all = Array.isArray(aiResult.skills.all) ? aiResult.skills.all : [];
-        safeSkills.matched = Array.isArray(aiResult.skills.matched) ? aiResult.skills.matched : [];
-        safeSkills.missing = Array.isArray(aiResult.skills.missing) ? aiResult.skills.missing : [];
+        safeSkills.all = ensureArray(aiResult.skills.all);
+        safeSkills.matched = ensureArray(aiResult.skills.matched);
+        safeSkills.missing = ensureArray(aiResult.skills.missing);
       }
     }
 
