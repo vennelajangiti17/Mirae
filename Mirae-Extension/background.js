@@ -28,7 +28,7 @@ async function triggerScrapeOnTab(tab) {
 chrome.runtime.onInstalled.addListener(() => {
   chrome.contextMenus.create({
     id: 'save-to-mirae',
-    title: '✨ Save to Mirae',
+    title: 'Save to Mirae',
     contexts: ['page', 'selection']
   });
 });
