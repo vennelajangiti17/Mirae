@@ -71,9 +71,9 @@ exports.updateProfile = async (req, res) => {
     const updatedUser = await User.findByIdAndUpdate(
       req.user.id,
       {
-        name: name.trim(),
-        email: normalizedEmail,
         $set: {
+          name: name.trim(),
+          email: normalizedEmail,
           "settings.profile.name": name.trim(),
           "settings.profile.email": normalizedEmail
         }
