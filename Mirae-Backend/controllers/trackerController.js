@@ -134,12 +134,39 @@ ${rawText.substring(0, 6000)}`;
       ? aiResult.company
       : companyFromUrl(url);
 
-    // 5. Ensure skills object is properly formatted
-    const safeSkills = {
-      all: aiResult.skills?.all || [],
-      matched: aiResult.skills?.matched || [],
-      missing: aiResult.skills?.missing || []
-    };
+    // 5. Ensure skills object is properly formatted (defensive parsing)
+    let safeSkills = { all: [], matched: [], missing: [] };
+    if (aiResult.skills) {
+      if (Array.isArray(aiResult.skills)) {
+        // Groq hallucinated a flat array instead of an object
+        safeSkills.all = aiResult.skills;
+        safeSkills.missing = aiResult.skills; // Assume missing if not categorized
+      } else {
+        safeSkills.all = Array.isArray(aiResult.skills.all) ? aiResult.skills.all : [];
+        safeSkills.matched = Array.isArray(aiResult.skills.matched) ? aiResult.skills.matched : [];
+        safeSkills.missing = Array.isArray(aiResult.skills.missing) ? aiResult.skills.missing : [];
+      }
+    }
+
+    // Safely parse matchScore (in case Groq returns "85%" or similar)
+    let safeMatchScore = null;
+    if (aiResult.matchScore !== undefined && aiResult.matchScore !== null) {
+      const parsed = parseInt(String(aiResult.matchScore).replace(/[^0-9]/g, ''), 10);
+      if (!isNaN(parsed)) safeMatchScore = parsed;
+    }
+    
+    // Enforce null match score if no resume
+    if (!hasResume) {
+      safeMatchScore = null;
+      safeSkills.matched = [];
+      safeSkills.missing = safeSkills.all; // If no resume, all required skills are technically "missing"
+    }
+
+    // Clean up description if it's too long or just raw text
+    let safeDescription = aiResult.description || '';
+    if (safeDescription.length > 2000) {
+      safeDescription = safeDescription.substring(0, 2000) + '...';
+    }
     
     // Normalize category
     const validCategories = ['Jobs', 'Internships', 'Hackathons', 'Open Source', 'Other'];
@@ -155,8 +182,8 @@ ${rawText.substring(0, 6000)}`;
       title: aiResult.title || 'Untitled Position',
       company: finalCompany,
       url: url || 'https://unknown',
-      description: aiResult.description || '',
-      matchScore: aiResult.matchScore,
+      description: safeDescription,
+      matchScore: safeMatchScore,
       skills: safeSkills,
       location: aiResult.location || '',
       postedDate: aiResult.postedDate || '',
@@ -220,5 +247,31 @@ exports.deleteJob = async (req, res) => {
   } catch (error) {
     console.error('Delete Error:', error);
     res.status(500).json({ error: 'Failed to delete job' });
+  }
+};
+
+// Update job status
+exports.updateJobStatus = async (req, res) => {
+  try {
+    const { status } = req.body;
+    
+    if (!status) {
+      return res.status(400).json({ error: 'Status is required' });
+    }
+
+    const updatedJob = await Job.findOneAndUpdate(
+      { _id: req.params.id, userId: req.user.id },
+      { $set: { status } },
+      { new: true }
+    );
+
+    if (!updatedJob) {
+      return res.status(404).json({ error: 'Job not found' });
+    }
+
+    res.status(200).json({ message: 'Job status updated successfully', job: updatedJob });
+  } catch (error) {
+    console.error('Update Status Error:', error);
+    res.status(500).json({ error: 'Failed to update job status' });
   }
 };

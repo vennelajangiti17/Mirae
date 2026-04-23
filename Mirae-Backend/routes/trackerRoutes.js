@@ -7,5 +7,6 @@ const { protect } = require('../middlewares/authMiddleware');
 router.post('/', protect, trackerController.createJob);
 router.get('/', protect, trackerController.getAllJobs);
 router.delete('/:id', protect, trackerController.deleteJob);
+router.put('/:id/status', protect, trackerController.updateJobStatus);
 
 module.exports = router;
