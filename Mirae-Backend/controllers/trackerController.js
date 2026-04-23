@@ -203,3 +203,23 @@ exports.getAllJobs = async (req, res) => {
     res.status(500).json({ error: "Failed to fetch jobs" });
   }
 };
+
+
+// Delete one job for the logged-in user
+exports.deleteJob = async (req, res) => {
+  try {
+    const deletedJob = await Job.findOneAndDelete({
+      _id: req.params.id,
+      userId: req.user.id,
+    });
+
+    if (!deletedJob) {
+      return res.status(404).json({ error: 'Job not found' });
+    }
+
+    res.status(200).json({ message: 'Job deleted successfully', id: deletedJob._id });
+  } catch (error) {
+    console.error('Delete Error:', error);
+    res.status(500).json({ error: 'Failed to delete job' });
+  }
+};
