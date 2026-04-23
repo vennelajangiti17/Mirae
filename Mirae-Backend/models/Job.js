@@ -32,10 +32,10 @@ const jobSchema = new mongoose.Schema({
 
   // 4. Details (Can be scraped, or added manually later via your popup form)
   location: { type: String, default: '' },
-  salaryRange: { type: String, default: '' },
+  salary: { type: String, default: '' },
   category: { 
     type: String, 
-    enum: ['Jobs', 'Hackathons', 'Others'], 
+    enum: ['Jobs', 'Internships', 'Hackathons', 'Open Source', 'Other'], 
     default: 'Jobs' 
   },
   

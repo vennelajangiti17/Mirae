@@ -67,6 +67,8 @@ You MUST return ONLY valid JSON in this exact format:
   "company": "Company Name",
   "location": "City, State or Remote",
   "postedDate": "Date posted, e.g., 2 days ago or exact date",
+  "salary": "Compensation range, e.g., $120k - $150k or ₹15LPA",
+  "category": "Strictly one of: Jobs, Internships, Hackathons, Open Source, or Other",
   "description": "A clean 2-paragraph summary of the job and requirements",
   "matchScore": 85,
   "skills": {
@@ -88,6 +90,8 @@ ${rawText.substring(0, 6000)}`;
       company: companyFromUrl(url),
       location: '',
       postedDate: '',
+      salary: '',
+      category: 'Jobs',
       description: '',
       matchScore: null,
       skills: {
@@ -136,6 +140,15 @@ ${rawText.substring(0, 6000)}`;
       matched: aiResult.skills?.matched || [],
       missing: aiResult.skills?.missing || []
     };
+    
+    // Normalize category
+    const validCategories = ['Jobs', 'Internships', 'Hackathons', 'Open Source', 'Other'];
+    let finalCategory = 'Jobs';
+    if (aiResult.category) {
+      const match = validCategories.find(c => c.toLowerCase() === aiResult.category.toLowerCase());
+      if (match) finalCategory = match;
+      else if (aiResult.category.toLowerCase() === 'others') finalCategory = 'Other';
+    }
 
     // 6. Build final document
     const finalData = {
@@ -147,7 +160,8 @@ ${rawText.substring(0, 6000)}`;
       skills: safeSkills,
       location: aiResult.location || '',
       postedDate: aiResult.postedDate || '',
-      category: 'Jobs', // Omni prompt is mainly for jobs
+      salary: aiResult.salary || aiResult.salaryRange || '',
+      category: finalCategory,
       status: 'Saved',
       userId: req.user.id
     };
