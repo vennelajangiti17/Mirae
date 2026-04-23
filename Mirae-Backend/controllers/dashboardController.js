@@ -41,7 +41,7 @@ const getRecentJobs = async (req, res) => {
       .sort({ createdAt: -1 })
       .limit(50)
       .select(
-        'company title status category url description matchScore matchedSkills missingSkills salaryRange location appliedDate createdAt'
+        'company title status category url description matchScore matchedSkills missingSkills salaryRange location appliedDate deadline createdAt'
       );
 
     res.status(200).json(recentJobs);

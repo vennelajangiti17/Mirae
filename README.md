@@ -2,436 +2,301 @@
   <img src="mirae-logo.svg" alt="Mirae Logo" width="120" />
 </p>
 
-<h1 align="center">Mirae — AI-Powered Career Command Center</h1>
+<h1 align="center">Mirae - AI-Powered Career Command Center</h1>
 
 <p align="center">
-  <strong>Track every opportunity with clarity, rhythm, and calm.</strong>
+  <strong>Save opportunities fast, understand them with AI, and track them in one calm workspace.</strong>
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=white" />
-  <img src="https://img.shields.io/badge/Node.js-Express-339933?logo=node.js&logoColor=white" />
-  <img src="https://img.shields.io/badge/MongoDB-Atlas-47A248?logo=mongodb&logoColor=white" />
-  <img src="https://img.shields.io/badge/Gemini_AI-2.5_Flash-4285F4?logo=google&logoColor=white" />
-  <img src="https://img.shields.io/badge/Chrome-Extension_MV3-4285F4?logo=googlechrome&logoColor=white" />
+  <img src="https://img.shields.io/badge/Frontend-React%20%2B%20Vite-61DAFB?logo=react&logoColor=white" />
+  <img src="https://img.shields.io/badge/Backend-Node.js%20%2B%20Express-339933?logo=node.js&logoColor=white" />
+  <img src="https://img.shields.io/badge/Database-MongoDB%20Atlas-47A248?logo=mongodb&logoColor=white" />
+  <img src="https://img.shields.io/badge/AI-Groq%20Llama%203.3-FF6B35" />
+  <img src="https://img.shields.io/badge/Extension-Chrome%20MV3-4285F4?logo=googlechrome&logoColor=white" />
 </p>
 
----
+## Overview
 
-## 📋 Table of Contents
+Mirae is a full-stack opportunity tracker built around three working pieces:
 
-- [Overview](#-overview)
-- [Architecture](#-architecture)
-- [Features](#-features)
-- [Tech Stack](#-tech-stack)
-- [Project Structure](#-project-structure)
-- [Prerequisites](#-prerequisites)
-- [Getting Started (For Teammates)](#-getting-started-for-teammates)
-- [Usage Guide](#-usage-guide)
-- [API Endpoints](#-api-endpoints)
-- [Environment Variables](#-environment-variables)
-- [Troubleshooting](#-troubleshooting)
-- [Contributing](#-contributing)
-- [License](#-license)
+- a React dashboard for browsing, filtering, and managing saved opportunities
+- an Express + MongoDB backend for auth, profile, AI enrichment, analytics, and persistence
+- a Chrome extension that clips pages and sends raw content to the backend
 
----
+The current product supports:
 
-## 🌟 Overview
+- `Jobs` tracking with full analytics and a detailed side drawer
+- `Hackathons/Contests` tracking with saved and registered sections plus a dedicated side panel
+- `Others` tracking for workshops, webinars, sessions, fellowships, scholarships, and similar pages
+- JWT auth, profile management, resume upload, and social link management
+- card deletion from both the dashboard UI and MongoDB
 
-**Mirae** (미래, Korean for "future") is a full-stack AI-powered job application tracking system that combines a **React dashboard**, a **Node.js/Express backend**, and a **Chrome browser extension** into one seamless workflow.
+## Current Product Flow
 
-Instead of manually bookmarking job listings or maintaining messy spreadsheets, Mirae lets you:
+1. A user logs into the Mirae dashboard.
+2. The dashboard syncs the JWT token to the Chrome extension.
+3. The extension scrapes visible page text and sends it to `POST /api/tracker`.
+4. The backend loads the user's resume text, sends the page content to Groq, and extracts:
+   - title
+   - company
+   - description
+   - location
+   - posted date
+   - salary
+   - deadline
+   - category
+   - skills
+   - match score
+5. The backend normalizes categories into:
+   - `Jobs`
+   - `Hackathons`
+   - `Others`
+6. The enriched record is saved in MongoDB with the logged-in user's `userId`.
+7. The dashboard loads the latest saved items and splits them by category and status.
 
-1. **Clip any job** from LinkedIn, Google Careers, Indeed, or any job site with one click.
-2. **AI analyzes it instantly** — extracting skills, salary, location, and calculating a personalized match score against your resume.
-3. **Track your pipeline** through a polished Kanban-style dashboard with analytics and calendar views.
+## Features
 
----
+### Dashboard
 
-## 🏗 Architecture
+- Jobs tab with sections for `Saved`, `Applied / Interviewing`, `Offers`, and `Rejected`
+- Hackathons/Contests tab with sections for `Saved` and `Registered`
+- Others tab with a `Saved` section
+- card-level delete menu that removes records from the UI and database
+- manual add flow for opportunities
+- top summary bar that changes based on the active tab
 
-```mermaid
-graph TD
-    subgraph "Client Side"
-        E[Chrome Extension<br/>Scrapes job pages]
-        D[React Dashboard<br/>Vite + Tailwind]
-    end
+### Detail Panels
 
-    subgraph "Server Side"
-        B[Node.js Backend<br/>Express API]
-    end
+- Jobs open a full `ApplicationDetail` drawer with skill analysis, description, score, and status controls
+- Hackathons/Contests and Others open an `OpportunityDetail` drawer with:
+  - organizer
+  - deadline
+  - location
+  - status
+  - description
+  - original source link
 
-    subgraph "External Services"
-        DB[(MongoDB Atlas<br/>Database)]
-        AI[Google Gemini 2.5<br/>AI Engine]
-    end
+### Analytics
 
-    E -- "1. POST raw job data" --> B
-    D -- "5. GET/PUT user data" --> B
-    B <-->| "2. Read/Write data" | DB
-    B <-->| "3. Prompt analysis" | AI
-```
+- Analytics & Insights is currently scoped to `Jobs` only
+- includes:
+  - saved / applied / rejected / offers cards
+  - application funnel
+  - status breakdown
+  - final outcomes chart
+  - top skills
+- Hackathons/Contests and Others do not affect analytics calculations
 
-### 🔄 End-to-End Data Flow
+### Account and Profile
 
-1. **Capture:** The user clicks "Save to Mirae" via the Chrome Extension on any job portal. The `content.js` script scrapes the page and `background.js` sends the raw text to the backend.
-2. **Retrieve Context:** The Node.js backend receives the request and securely fetches the user's uploaded resume from **MongoDB Atlas**.
-3. **AI Analysis:** The backend sends the job description and the resume to **Gemini 2.5 Flash**. Gemini acts as the "analytical brain", calculating the match score and extracting required skills, missing skills, location, and salary.
-4. **Storage:** The backend merges the AI insights with the scraped data, attaches the user's ID to ensure strict data isolation, and saves the final enriched document to MongoDB.
-5. **Display:** The user opens the **React Dashboard**, which securely fetches the saved jobs and analytics via the backend REST API, displaying them in a beautiful Kanban view.
+- register and login with JWT
+- protected routes on the frontend
+- profile fetch for logged-in user
+- resume upload and delete
+- social portfolio link management
+- logout flow with confirmation
 
----
+### Chrome Extension
 
-## ✨ Features
+- right-click `Save to Mirae` context menu
+- page text scraping via content script
+- token sync from dashboard to extension
+- background worker posts clipped content to the backend
 
-### 🔌 Chrome Extension
-- **One-click job saving** from any job site (LinkedIn, Google Careers, Indeed, etc.)
-- **Right-click context menu** — "Save to Mirae" on any page
-- **Auto token sync** — logs in automatically when you sign into the dashboard
-- **Smart scraping** — extracts job title, company, URL, and up to 4,000 characters of description
+### Calendar
 
-### 📊 Dashboard
-- **Kanban pipeline** — Saved → Applied → Interviewing → Offer → Rejected
-- **AI Match Score** on every job card (or "Add resume" prompt if no resume uploaded)
-- **Detail drawer** — click any card to see matched/missing skills, full description, and score breakdown
-- **Add Manual** — manually add opportunities, hackathons, or other entries
-- **Real-time summary** — total jobs, saved, applied, interviewing, offers, rejected counts
+- the calendar screen exists in the frontend and is currently a UI-rich mock view
+- it is not yet wired to a live backend route in the running server
 
-### 📈 Analytics
-- **Application Funnel** — visual breakdown of your pipeline stages
-- **Final Outcomes donut chart** — Offers vs Rejected vs Active
-- **Top Skills** — most frequently matched skills across all your applications
-- **Status Breakdown** — per-status counts
-- **Avg Match Score** — calculated only from jobs with valid AI scores
+## Tech Stack
 
-### 📅 Calendar
-- **Visual calendar** with event dots for deadlines, interviews, and follow-ups
-- **Click any date** for a detailed event modal
-- **Weekly summary** — upcoming interviews, deadlines, and follow-ups
-- **Upcoming agenda** with action buttons (Draft Email, View Prep Notes, Open Link)
+### Frontend
 
-### ⚙️ Settings
-- **Live profile** — name and email pulled from your account (not hardcoded)
-- **Theme toggle** — Light/Dark mode
-- **Resume management** — upload `.txt` or `.pdf` files that sync to your AI profile
-- **Social portfolio** — manage LinkedIn, GitHub, and portfolio links
-- **Extension controls** — keyboard shortcuts, notification preferences
+- React
+- Vite
+- TypeScript
+- Tailwind CSS
+- Motion
+- Recharts
+- Radix UI
+- Lucide React
 
-### 🔐 Security
-- **JWT authentication** on every API endpoint
-- **Per-user data isolation** — you only see your own jobs, never anyone else's
-- **Protected routes** — frontend enforces both `isLoggedIn` flag and valid token
-- **Graceful AI fallback** — jobs are saved even if Gemini fails
+### Backend
 
----
+- Node.js
+- Express
+- Mongoose
+- JWT
+- bcrypt
+- multer
+- pdf-parse
 
-## 🛠 Tech Stack
+### AI and Data
 
-| Layer | Technology |
-|-------|-----------|
-| **Frontend** | React 19, Vite, TypeScript, Framer Motion, Recharts, Radix UI |
-| **Backend** | Node.js, Express.js, Mongoose, JWT, bcrypt |
-| **Database** | MongoDB Atlas |
-| **AI** | Google Gemini 2.5 Flash (`@google/generative-ai`) |
-| **Extension** | Chrome Manifest V3 (Service Worker, Content Script) |
-| **Styling** | Tailwind CSS, Google Fonts (Playfair Display, Outfit) |
+- Groq SDK with `llama-3.3-70b-versatile` for extraction and enrichment
+- MongoDB Atlas for persistence
 
----
+## Project Structure
 
-## 📁 Project Structure
-
-```
+```text
 Mirae/
-├── src/                          # React Frontend
-│   └── app/
-│       ├── App.tsx               # Router + Layout
-│       ├── components/
-│       │   ├── Dashboard.tsx     # Main Kanban dashboard
-│       │   ├── Analytics.tsx     # Charts & insights
-│       │   ├── CalendarView.tsx  # Calendar & reminders
-│       │   ├── Settings.tsx      # User settings
-│       │   ├── ApplicationDetail.tsx  # Job detail drawer
-│       │   ├── AddManualModal.tsx     # Manual job entry
-│       │   ├── LoginModal.tsx    # Login form
-│       │   ├── SignupModal.tsx   # Signup form
-│       │   ├── Sidebar.tsx       # Navigation sidebar
-│       │   ├── ProfilePopover.tsx     # Profile menu
-│       │   ├── ManageResumesModal.tsx # Resume upload
-│       │   ├── SocialPortfolioModal.tsx # Social links
-│       │   └── ProtectedRoute.tsx     # Auth guard
-│       ├── services/
-│       │   ├── authService.ts         # Auth + Profile API
-│       │   ├── dashboardService.ts    # Dashboard API
-│       │   └── analyticsService.ts    # Analytics API
-│       └── hooks/
-│           └── useTheme.ts            # Theme management
-│
-├── Mirae-Backend/                # Node.js Backend
-│   ├── server.js                 # Express entry point
-│   ├── config/
-│   │   └── db.js                 # MongoDB connection
-│   ├── models/
-│   │   ├── User.js               # User schema (name, email, resumeText, socialLinks)
-│   │   └── Job.js                # Job schema (title, company, matchScore, skills, etc.)
-│   ├── middlewares/
-│   │   └── authMiddleware.js     # JWT verification
+├── src/
+│   ├── app/
+│   │   ├── App.tsx
+│   │   ├── components/
+│   │   │   ├── Dashboard.tsx
+│   │   │   ├── Analytics.tsx
+│   │   │   ├── CalendarView.tsx
+│   │   │   ├── Settings.tsx
+│   │   │   ├── ApplicationDetail.tsx
+│   │   │   ├── OpportunityDetail.tsx
+│   │   │   ├── AddManualModal.tsx
+│   │   │   ├── ManageResumesModal.tsx
+│   │   │   ├── LoginModal.tsx
+│   │   │   ├── SignupModal.tsx
+│   │   │   ├── Sidebar.tsx
+│   │   │   └── ProtectedRoute.tsx
+│   │   ├── services/
+│   │   │   ├── authService.ts
+│   │   │   ├── dashboardService.ts
+│   │   │   ├── analyticsService.ts
+│   │   │   ├── profileService.ts
+│   │   │   ├── trackerService.ts
+│   │   │   └── settingsService.ts
+│   │   └── types/
+│   └── styles/
+├── Mirae-Backend/
+│   ├── config/db.js
 │   ├── controllers/
-│   │   ├── trackerController.js  # AI analysis + job save
-│   │   ├── profileController.js  # Profile, resume, social links
-│   │   ├── dashboardController.js # Summary + recent jobs
-│   │   └── analyticsController.js # Overview, status, trends
+│   │   ├── analyticsController.js
+│   │   ├── authController.js
+│   │   ├── dashboardController.js
+│   │   ├── profileController.js
+│   │   ├── trackerController.js
+│   │   └── settingsController.js
+│   ├── middlewares/authMiddleware.js
+│   ├── models/
+│   │   ├── Job.js
+│   │   ├── User.js
+│   │   └── CalendarEvent.js
 │   ├── routes/
-│   │   ├── authRoutes.js         # POST /register, /login
-│   │   ├── trackerRoutes.js      # POST /tracker, GET /tracker
-│   │   ├── profileRoutes.js      # GET/PUT /profile
-│   │   ├── dashboardRoutes.js    # GET /dashboard/summary, /recent
-│   │   └── analyticsRoutes.js    # GET /analytics/overview, etc.
-│   └── .env                      # Environment variables
-│
-├── Mirae-Extension/              # Chrome Extension (MV3)
-│   ├── manifest.json             # Extension config
-│   ├── background.js             # Service worker (API calls, token storage)
-│   ├── content.js                # Page scraper + token sync
-│   ├── popup.html                # Extension popup UI
-│   └── popup.js                  # Popup button handlers
-│
-└── README.md                     # You are here!
+│   │   ├── analyticsRoutes.js
+│   │   ├── authRoutes.js
+│   │   ├── dashboardRoutes.js
+│   │   ├── profileRoutes.js
+│   │   ├── trackerRoutes.js
+│   │   └── settingsRoutes.js
+│   └── server.js
+├── Mirae-Extension/
+│   ├── manifest.json
+│   ├── background.js
+│   ├── content.js
+│   ├── popup.html
+│   └── popup.js
+└── README.md
 ```
 
----
+## Backend Endpoints
 
-## 📦 Prerequisites
+### Auth
 
-- **Node.js** v18 or higher
-- **npm** v9 or higher
-- **MongoDB Atlas** account (free tier works)
-- **Google Gemini API Key** from [Google AI Studio](https://aistudio.google.com/app/apikey)
-- **Google Chrome** browser
+- `POST /api/auth/register`
+- `POST /api/auth/login`
 
----
+### Profile
 
-## 🚀 Getting Started (For Teammates)
+- `GET /api/profile`
+- `POST /api/profile/resume/upload`
+- `PUT /api/profile/resume`
+- `DELETE /api/profile/resume`
+- `PUT /api/profile/social-links`
 
-Follow these steps **exactly in order** after pulling the repo.
+### Tracker
 
-### Step 1 — Clone the Repo
+- `POST /api/tracker`
+- `GET /api/tracker`
+- `DELETE /api/tracker/:id`
 
-```bash
-git clone https://github.com/vennelajangiti17/Mirae.git
-cd Mirae
-```
+### Dashboard
 
-### Step 2 — Install Frontend Dependencies
+- `GET /api/dashboard/summary`
+- `GET /api/dashboard/recent`
 
-```bash
-npm install
-```
+### Analytics
 
-### Step 3 — Install Backend Dependencies
+- `GET /api/analytics/overview`
+- `GET /api/analytics/status-breakdown`
+- `GET /api/analytics/trends`
 
-```bash
-cd Mirae-Backend
-npm install
-```
+## Environment Variables
 
-### Step 4 — Create Your `.env` File
-
-While still inside `Mirae-Backend/`, create a file called `.env` and paste this:
+Create `Mirae-Backend/.env` with:
 
 ```env
-MONGO_URI=mongodb+srv://<username>:<password>@cluster.mongodb.net/mirae?retryWrites=true&w=majority
-JWT_SECRET=mirae_super_secret_key_2026
-GEMINI_API_KEY=<your_gemini_api_key>
+MONGO_URI=<your_mongodb_atlas_uri>
+JWT_SECRET=<your_jwt_secret>
+GROQ_API_KEY=<your_groq_api_key>
 PORT=5000
 ```
 
-> **How to get each value:**
-> - `MONGO_URI` → Ask the team lead for the shared MongoDB Atlas connection string, or create your own free cluster at [mongodb.com/atlas](https://www.mongodb.com/atlas)
-> - `JWT_SECRET` → Any random string. All teammates can use the same one to share sessions.
-> - `GEMINI_API_KEY` → Get your own free key at [Google AI Studio](https://aistudio.google.com/app/apikey) (takes 30 seconds)
+Notes:
 
-### Step 5 — Start the Backend (Terminal 1)
+- `GROQ_API_KEY` is required for the tracker analysis flow
+- the backend package still includes `@google/generative-ai`, but the current tracker pipeline uses Groq
+- frontend services expect the backend on `http://localhost:5000`
+
+## Local Setup
+
+### 1. Install frontend dependencies
 
 ```bash
-cd Mirae-Backend
+cd /Users/vennelajangiti17/Documents/Mirae
+npm install
+```
+
+### 2. Install backend dependencies
+
+```bash
+cd /Users/vennelajangiti17/Documents/Mirae/Mirae-Backend
+npm install
+```
+
+### 3. Start the backend
+
+```bash
+cd /Users/vennelajangiti17/Documents/Mirae/Mirae-Backend
 node server.js
 ```
 
-✅ You should see:
-```
-🌟 Mirae Backend is listening on port 5000
-🔗 Health check available at http://localhost:5000/health
-✅ Successfully connected to MongoDB Database!
-```
-
-> ⚠️ If you see a MongoDB connection error, double-check your `MONGO_URI` in `.env`.
-> ⚠️ If you see a Gemini error, that's OK — jobs will still save, just without AI analysis.
-
-### Step 6 — Start the Frontend (Terminal 2)
-
-Open a **new/second terminal** (don't close the backend one):
+### 4. Start the frontend
 
 ```bash
-cd Mirae
+cd /Users/vennelajangiti17/Documents/Mirae
 npm run dev
 ```
 
-✅ You should see:
-```
-  VITE v6.x.x  ready in 500ms
+### 5. Load the extension in Chrome
 
-  ➜  Local:   http://localhost:5173/
-```
+1. Open `chrome://extensions`
+2. Turn on Developer Mode
+3. Click `Load unpacked`
+4. Select `Mirae-Extension`
 
-### Step 7 — Load the Chrome Extension
+## Current Notes and Caveats
 
-1. Open **Google Chrome**
-2. Go to `chrome://extensions` in the address bar
-3. Turn on **Developer mode** (toggle in the top-right corner)
-4. Click **"Load unpacked"**
-5. Navigate to and select the `Mirae-Extension` folder inside the project
-6. You'll see "Mirae AI Tracker" appear — **pin it** to your toolbar for easy access
+- Analytics is intentionally Jobs-only
+- the calendar page is currently mock data in the frontend
+- category normalization now tries to route all non-job, non-hackathon pages into `Others`
+- deadline extraction depends on deadline text being present in the scraped page content
+- existing bad records in MongoDB do not auto-fix when classification logic changes
 
-### Step 8 — Create Your Account
+## Team Notes
 
-1. Open `http://localhost:5173` in Chrome
-2. Click **"Sign Up"**
-3. Enter your name, email, and password
-4. You'll land on the Dashboard — **your token is automatically synced to the extension**
-
-### Step 9 — (Optional) Upload Your Resume
-
-This enables AI Match Scoring on saved jobs:
-
-1. On the dashboard, look at the **bottom-left** of the sidebar — click your name
-2. Click **"Manage Resumes"**
-3. Click **"Upload Resume"** and select a `.txt` file containing your resume text
-4. You'll see "✨ Resume uploaded and AI Profile updated!"
-
----
-
-## 📖 Usage Guide
-
-5. You'll see a success alert like:
-   - With resume: `✨ Success! "Data Engineer" analyzed by AI and saved to Mirae with a Match Score of 78%!`
-   - Without resume: `✨ Success! "Data Engineer" analyzed by AI and saved to Mirae. Upload your resume on the dashboard to get a Match Score!`
-6. Go to `http://localhost:5173/dashboard` and **refresh** — your job card will appear under "Saved"
-
-### What the AI Does Automatically
-
-When you save a job, Gemini AI extracts:
-- 🏢 **Company name** (even if the scraper can't detect it from the page HTML)
-- 🛠️ **Required skills** (Python, SQL, AWS, React, etc.) — always extracted
-- 📍 **Location** and 💰 **Salary range** (if mentioned)
-- 📊 **Match Score** (0-100%) — only if you've uploaded a resume
-- ✅ **Matched skills** — skills you have that the job wants
-- ❌ **Missing skills** — skills you need to learn
-
-### Viewing Job Details
-
-1. Click any **job card** on the dashboard
-2. A detail drawer slides in from the right showing:
-   - AI Match Score circle
-   - Full job description
-   - Required skills (green tags = matched, red tags = missing)
-   - Quick links to the original listing
-
-### Dashboard Pages
-
-| Page | What it shows |
-|------|--------------|
-| **Dashboard** | Your Kanban pipeline — Saved → Applied → Interviewing → Offer → Rejected |
-| **Analytics** | Charts, funnel, top skills, avg match score, trends |
-| **Calendar** | Upcoming deadlines, interviews, follow-ups |
-| **Settings** | Profile info, theme toggle, resume management, social links |
-
-### Adding Jobs Manually
-
-1. Click **"+ Add Manual"** (top-right of dashboard)
-2. Fill in the job title, company, URL, skills, etc.
-3. Click **Save** — it appears on your dashboard immediately
-
----
-
-## 🔌 API Endpoints
-
-### Authentication
-| Method | Endpoint | Description | Auth |
-|--------|----------|-------------|------|
-| POST | `/api/auth/register` | Create a new account | ❌ |
-| POST | `/api/auth/login` | Log in and receive JWT | ❌ |
-
-### Job Tracker
-| Method | Endpoint | Description | Auth |
-|--------|----------|-------------|------|
-| POST | `/api/tracker` | Save a job with AI analysis | ✅ |
-| GET | `/api/tracker` | Get all jobs for the logged-in user | ✅ |
-
-### Profile
-| Method | Endpoint | Description | Auth |
-|--------|----------|-------------|------|
-| GET | `/api/profile` | Get user profile | ✅ |
-| PUT | `/api/profile/resume` | Update resume text | ✅ |
-| PUT | `/api/profile/social-links` | Update social links | ✅ |
-
-### Dashboard
-| Method | Endpoint | Description | Auth |
-|--------|----------|-------------|------|
-| GET | `/api/dashboard/summary` | Get status counts | ✅ |
-| GET | `/api/dashboard/recent` | Get recent jobs (up to 50) | ✅ |
-
-### Analytics
-| Method | Endpoint | Description | Auth |
-|--------|----------|-------------|------|
-| GET | `/api/analytics/overview` | Get overview stats + top skills | ✅ |
-| GET | `/api/analytics/status-breakdown` | Get per-status counts | ✅ |
-| GET | `/api/analytics/trends` | Get daily job-saving trends | ✅ |
-
----
-
-## 🔐 Environment Variables
-
-| Variable | Description | Example |
-|----------|-------------|---------|
-| `MONGO_URI` | MongoDB Atlas connection string | `mongodb+srv://user:pass@cluster.mongodb.net/mirae` |
-| `JWT_SECRET` | Secret key for signing JWT tokens | `my_super_secret_key_123` |
-| `GEMINI_API_KEY` | Google Gemini API key | `AIzaSy...` |
-| `PORT` | Backend server port | `5000` |
-
-> ⚠️ **Important:** Never commit your `.env` file to version control. It's already in `.gitignore`.
-
----
-
-## 🔧 Troubleshooting
-
-| Problem | Solution |
-|---------|----------|
-| Extension says "You are not logged in" | Open `localhost:5173`, log in, then try saving again. The token syncs automatically. |
-| Extension says "Extension disconnected" | Refresh the job listing page and try again. |
-| Jobs saved but no match score | Upload your resume via Profile → Manage Resumes. |
-| Dashboard shows nothing after saving | Hard refresh with `Ctrl + Shift + R`. |
-| Backend crashes with Gemini error | Check that your `GEMINI_API_KEY` in `.env` is valid. Get a new key from [AI Studio](https://aistudio.google.com/app/apikey). |
-| "Cannot read properties of null" error | Make sure you've restarted the backend after code changes. |
-| CORS errors in the console | The backend is configured with `origin: true`. Make sure the backend is running on port 5000. |
-
----
-
-## 🤝 Contributing
-
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
-
----
-
-## 📄 License
-
-This project is licensed under the MIT License.
-
----
-
-<p align="center">
-  Built with ❤️ by the Mirae Team
-</p>
+- pull latest `main` before running the app locally
+- if backend dependencies change, rerun `npm install` inside `Mirae-Backend`
+- if the extension saves fail, check:
+  - dashboard login state
+  - token sync
+  - backend server running on port `5000`
+  - `GROQ_API_KEY` present in `Mirae-Backend/.env`

@@ -11,6 +11,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router';
 import { ApplicationDetail } from './ApplicationDetail';
 import { AddManualModal } from './AddManualModal';
+import { OpportunityDetail } from './OpportunityDetail';
 import {
   deleteDashboardJob,
   getDashboardSummary,
@@ -35,6 +36,7 @@ interface Application {
   description: string;
   location: string;
   postedDate: string;
+  deadline?: string;
   salaryRange: string;
   skills: {
     all: string[];
@@ -87,6 +89,13 @@ const getCompanyFaviconUrl = (job: any): string => {
   return '';
 };
 
+const normalizeDashboardCategory = (raw?: string | null): 'Jobs' | 'Hackathons' | 'Others' => {
+  const value = (raw || '').toLowerCase().trim();
+  if (value === 'jobs' || value === 'job') return 'Jobs';
+  if (value === 'hackathons' || value === 'hackathon' || value === 'contest') return 'Hackathons';
+  return 'Others';
+};
+
 const mapJobToApplication = (job: any): Application => ({
   id: job._id,
   company: job.company || 'Unknown Company',
@@ -94,13 +103,14 @@ const mapJobToApplication = (job: any): Application => ({
   matchScore: job.matchScore ?? null,
   appliedDate: formatDate(job.appliedDate || job.createdAt),
   stage: job.status || 'Saved',
-  category: job.category || 'Jobs',
+  category: normalizeDashboardCategory(job.category),
   companyAcronym: getCompanyAcronym(job.company || 'UC'),
   imageUrl: getCompanyFaviconUrl(job),
   url: job.url || '',
   description: job.description || 'No job description provided.',
   location: job.location || 'Unknown Location',
   postedDate: job.postedDate || 'Unknown Date',
+  deadline: job.deadline || '',
   salaryRange: job.salary || job.salaryRange || '',
   skills: {
     all: job.skills?.all || [],
@@ -118,12 +128,6 @@ const buildSummary = (apps: Application[]) => ({
   rejected: apps.filter((app) => app.stage === 'Rejected').length,
 });
 
-const TAB_LABELS: Record<DashboardTab, string> = {
-  jobs: 'Jobs',
-  hackathons: 'Hackathons/Contests',
-  others: 'Others',
-};
-
 export function Dashboard() {
   const [selectedApp, setSelectedApp] = useState<Application | null>(null);
   const [activeTab, setActiveTab] = useState<DashboardTab>('jobs');
@@ -138,7 +142,7 @@ export function Dashboard() {
   useEffect(() => {
     const loadDashboard = async () => {
       try {
-        const [summaryData, recentJobs] = await Promise.all([
+        const [, recentJobs] = await Promise.all([
           getDashboardSummary(),
           getRecentJobs(),
         ]);
@@ -186,7 +190,6 @@ export function Dashboard() {
 
       setApplications((currentApps) => {
         const nextApps = currentApps.filter((app) => app.id !== appId);
-
         if (selectedApp?.id === appId) {
           setSelectedApp(null);
         }
@@ -204,18 +207,16 @@ export function Dashboard() {
   const handleStatusChange = async (appId: string, newStatus: string) => {
     try {
       await updateJobStatus(appId, newStatus);
-      
-      // Update local state instantly to reflect the new tab/stage
+
       setApplications((currentApps) => {
-        const nextApps = currentApps.map(app => 
+        const nextApps = currentApps.map((app) =>
           app.id === appId ? { ...app, stage: newStatus } : app
         );
-        
-        // Also update the selectedApp if it's currently open
+
         if (selectedApp?.id === appId) {
-          setSelectedApp(prev => prev ? { ...prev, stage: newStatus } : null);
+          setSelectedApp((prev) => (prev ? { ...prev, stage: newStatus } : null));
         }
-        
+
         return nextApps;
       });
     } catch (error) {
@@ -226,16 +227,16 @@ export function Dashboard() {
 
   const filteredApps = useMemo(() => {
     return applications.filter((app) => {
-      const cat = app.category || 'Jobs';
-      const matchesTab = 
-        activeTab === 'jobs' ? (cat === 'Jobs' || cat === 'Internships') :
-        activeTab === 'hackathons' ? (cat === 'Hackathons') :
-        (cat === 'Open Source' || cat === 'Other' || cat === 'Others');
-      
+      const matchesTab =
+        activeTab === 'jobs'
+          ? app.category === 'Jobs'
+          : activeTab === 'hackathons'
+          ? app.category === 'Hackathons'
+          : app.category === 'Others';
+
       if (!matchesTab) return false;
-      
       if (!searchQuery) return true;
-      
+
       const q = searchQuery.toLowerCase();
       return (
         app.company.toLowerCase().includes(q) ||
@@ -287,24 +288,7 @@ export function Dashboard() {
       {
         key: 'hackathons-registered',
         title: 'Registered',
-        apps: filteredApps.filter((app) => app.stage === 'Applied'),
-      },
-      {
-        key: 'hackathons-in-review',
-        title: 'In Review',
-        apps: filteredApps.filter((app) => app.stage === 'Interviewing'),
-      },
-      {
-        key: 'hackathons-accepted',
-        title: 'Accepted',
-        apps: filteredApps.filter((app) => app.stage === 'Offer'),
-        variant: 'selected',
-      },
-      {
-        key: 'hackathons-closed',
-        title: 'Closed',
-        apps: filteredApps.filter((app) => app.stage === 'Rejected'),
-        variant: 'rejected',
+        apps: filteredApps.filter((app) => app.stage !== 'Saved'),
       },
     ],
     [filteredApps]
@@ -316,25 +300,6 @@ export function Dashboard() {
         key: 'others-saved',
         title: 'Saved',
         apps: filteredApps.filter((app) => app.stage === 'Saved'),
-      },
-      {
-        key: 'others-active',
-        title: 'Active',
-        apps: filteredApps.filter(
-          (app) => app.stage === 'Applied' || app.stage === 'Interviewing'
-        ),
-      },
-      {
-        key: 'others-completed',
-        title: 'Completed',
-        apps: filteredApps.filter((app) => app.stage === 'Offer'),
-        variant: 'selected',
-      },
-      {
-        key: 'others-closed',
-        title: 'Closed',
-        apps: filteredApps.filter((app) => app.stage === 'Rejected'),
-        variant: 'rejected',
       },
     ],
     [filteredApps]
@@ -351,8 +316,8 @@ export function Dashboard() {
     activeTab === 'jobs'
       ? `Total Jobs: ${activeSummary.totalJobs} | Saved: ${activeSummary.saved} | Applied: ${activeSummary.applied} | Interviewing: ${activeSummary.interviewing} | Offers: ${activeSummary.offers} | Rejected: ${activeSummary.rejected}`
       : activeTab === 'hackathons'
-      ? `Total Hackathons/Contests: ${activeSummary.totalJobs} | Saved: ${activeSummary.saved} | Registered: ${activeSummary.applied} | In Review: ${activeSummary.interviewing} | Accepted: ${activeSummary.offers} | Closed: ${activeSummary.rejected}`
-      : `Total Others: ${activeSummary.totalJobs} | Saved: ${activeSummary.saved} | Active: ${activeSummary.applied + activeSummary.interviewing} | Completed: ${activeSummary.offers} | Closed: ${activeSummary.rejected}`;
+      ? `Total Hackathons/Contests: ${filteredApps.length} | Saved: ${hackathonSections[0].apps.length} | Registered: ${hackathonSections[1].apps.length}`
+      : `Total Others: ${filteredApps.length} | Saved: ${othersSections[0].apps.length}`;
 
   const renderCard = (
     app: Application,
@@ -440,7 +405,7 @@ export function Dashboard() {
               : app.matchScore !== null
               ? `${app.matchScore}% Match`
               : activeTab === 'hackathons'
-              ? 'Track registration'
+              ? 'Open details'
               : activeTab === 'others'
               ? 'Keep this handy'
               : 'Add resume for Match Score'}
@@ -593,13 +558,19 @@ export function Dashboard() {
         ))}
       </div>
 
-      {selectedApp && (
-        <ApplicationDetail
-          application={selectedApp}
-          onClose={() => setSelectedApp(null)}
-          onStatusChange={handleStatusChange}
-        />
-      )}
+      {selectedApp &&
+        (selectedApp.category === 'Jobs' ? (
+          <ApplicationDetail
+            application={selectedApp}
+            onClose={() => setSelectedApp(null)}
+            onStatusChange={handleStatusChange}
+          />
+        ) : (
+          <OpportunityDetail
+            application={selectedApp}
+            onClose={() => setSelectedApp(null)}
+          />
+        ))}
 
       {showAddModal && (
         <AddManualModal 

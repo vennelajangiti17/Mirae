@@ -35,7 +35,7 @@ const jobSchema = new mongoose.Schema({
   salary: { type: String, default: '' },
   category: { 
     type: String, 
-    enum: ['Jobs', 'Internships', 'Hackathons', 'Open Source', 'Other'], 
+    enum: ['Jobs', 'Hackathons', 'Others', 'Internships', 'Open Source', 'Other'], 
     default: 'Jobs' 
   },
   

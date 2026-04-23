@@ -4,14 +4,66 @@ const Groq = require('groq-sdk');
 
 const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
 
-// Helper: Normalize category to match Mongoose enum exactly
-const normalizeCategory = (raw) => {
-  if (!raw) return 'Jobs';
-  const lower = raw.toLowerCase().trim();
-  if (lower === 'jobs' || lower === 'job') return 'Jobs';
-  if (lower === 'hackathons' || lower === 'hackathon') return 'Hackathons';
-  if (lower === 'others' || lower === 'other') return 'Others';
-  return 'Jobs';
+// Helper: Normalize category into the dashboard's 3 buckets
+const normalizeCategory = (raw, context = '') => {
+  const rawValue = String(raw || '').toLowerCase().trim();
+  const combined = `${raw || ''} ${context || ''}`.toLowerCase().trim();
+
+  if (['jobs', 'job'].includes(rawValue)) return 'Jobs';
+  if (['hackathons', 'hackathon', 'contest', 'contests'].includes(rawValue)) return 'Hackathons';
+  if (['others', 'other'].includes(rawValue)) return 'Others';
+
+  const hackathonKeywords = [
+    'hackathon',
+    'contest',
+    'competition',
+    'challenge',
+    'ctf',
+    'bounty',
+    'buildathon'
+  ];
+
+  const strongJobKeywords = [
+    'software engineer',
+    'data scientist',
+    'data science manager',
+    'security engineer',
+    'product manager',
+    'designer',
+    'developer',
+    'engineer',
+    'manager',
+    'analyst',
+    'specialist',
+    'consultant',
+    'recruiter',
+    'full-time',
+    'part-time',
+    'apply now',
+    'job description',
+    'responsibilities',
+    'qualifications',
+    'requirements'
+  ];
+
+  const otherKeywords = [
+    'workshop',
+    'webinar',
+    'session',
+    'bootcamp',
+    'masterclass',
+    'fellowship',
+    'scholarship',
+    'meetup',
+    'conference',
+    'summit'
+  ];
+
+  if (hackathonKeywords.some((keyword) => combined.includes(keyword))) return 'Hackathons';
+  if (strongJobKeywords.some((keyword) => combined.includes(keyword))) return 'Jobs';
+  if (otherKeywords.some((keyword) => combined.includes(keyword))) return 'Others';
+
+  return 'Others';
 };
 
 // Helper: Extract company name from URL as last resort
@@ -23,6 +75,26 @@ const companyFromUrl = (url) => {
   } catch {
     return 'Unknown Company';
   }
+};
+
+const parseDeadline = (raw) => {
+  if (!raw) return null;
+
+  const value = String(raw).trim();
+  if (!value || /not specified|unknown|n\/a|none/i.test(value)) return null;
+
+  const parsed = new Date(value);
+  if (!Number.isNaN(parsed.getTime())) return parsed;
+
+  const numericMatch = value.match(/(\d{1,2})[\/-](\d{1,2})[\/-](\d{2,4})/);
+  if (numericMatch) {
+    const [, a, b, c] = numericMatch;
+    const year = c.length === 2 ? `20${c}` : c;
+    const iso = new Date(`${year}-${b.padStart(2, '0')}-${a.padStart(2, '0')}`);
+    if (!Number.isNaN(iso.getTime())) return iso;
+  }
+
+  return null;
 };
 
 // Main handler: AI analysis via Groq (Llama 3) + save
@@ -55,7 +127,7 @@ exports.createJob = async (req, res) => {
 I will provide you with the raw text scraped from a job board webpage. 
 Your job is to find the job details and return a strict JSON object.
 
-If you cannot find a specific detail, use "Not specified" or "Unknown".
+If you cannot find a specific detail, use "Not specified" or "Unknown". Only classify into Jobs, Hackathons, or Others. Anything that is not a job posting and not a hackathon/contest must be Others.
 
 CRITICAL INSTRUCTION: I will also provide the candidate's current skills. You must compare the job's required skills against the candidate's skills to calculate a Match Score (0-100). Furthermore, you must categorize the job's required skills into "matched" (skills the candidate has) and "missing" (skills the candidate lacks).
 
@@ -68,7 +140,8 @@ You MUST return ONLY valid JSON in this exact format:
   "location": "City, State or Remote",
   "postedDate": "Date posted, e.g., 2 days ago or exact date",
   "salary": "Compensation range, e.g., $120k - $150k or ₹15LPA",
-  "category": "Strictly one of: Jobs, Internships, Hackathons, Open Source, or Other",
+  "deadline": "Exact deadline date if present, otherwise empty string",
+  "category": "Strictly one of: Jobs, Hackathons, Others",
   "description": "A clean 2-paragraph summary of the job and requirements",
   "matchScore": 85,
   "skills": {
@@ -91,6 +164,7 @@ ${rawText.substring(0, 6000)}`;
       location: '',
       postedDate: '',
       salary: '',
+      deadline: '',
       category: 'Jobs',
       description: '',
       matchScore: null,
@@ -174,14 +248,15 @@ ${rawText.substring(0, 6000)}`;
       safeDescription = safeDescription.substring(0, 2000) + '...';
     }
     
-    // Normalize category
-    const validCategories = ['Jobs', 'Internships', 'Hackathons', 'Open Source', 'Other'];
-    let finalCategory = 'Jobs';
-    if (aiResult.category) {
-      const match = validCategories.find(c => c.toLowerCase() === aiResult.category.toLowerCase());
-      if (match) finalCategory = match;
-      else if (aiResult.category.toLowerCase() === 'others') finalCategory = 'Other';
-    }
+    const categoryContext = [
+      aiResult.category,
+      aiResult.title,
+      aiResult.description,
+      rawText.substring(0, 2000)
+    ].join(' ');
+
+    const finalCategory = normalizeCategory(aiResult.category, categoryContext);
+    const finalDeadline = parseDeadline(aiResult.deadline);
 
     // 6. Build final document
     const finalData = {
@@ -194,6 +269,7 @@ ${rawText.substring(0, 6000)}`;
       location: aiResult.location || '',
       postedDate: aiResult.postedDate || '',
       salary: aiResult.salary || aiResult.salaryRange || '',
+      deadline: finalDeadline,
       category: finalCategory,
       status: 'Saved',
       userId: req.user.id
@@ -203,7 +279,9 @@ ${rawText.substring(0, 6000)}`;
       title: finalData.title,
       company: finalData.company,
       matchScore: finalData.matchScore,
-      skillsCount: finalData.skills?.all?.length
+      skillsCount: finalData.skills?.all?.length,
+      category: finalData.category,
+      deadline: finalData.deadline
     });
 
     const newJob = new Job(finalData);

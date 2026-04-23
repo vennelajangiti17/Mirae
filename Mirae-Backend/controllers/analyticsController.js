@@ -4,7 +4,7 @@ const mongoose = require('mongoose');
 const getAnalyticsOverview = async (req, res) => {
   try {
     const userId = req.user.id;
-    const jobs = await Job.find({ userId }).select(
+    const jobs = await Job.find({ userId, category: 'Jobs' }).select(
       'status matchScore skills matchedSkills missingSkills company title createdAt'
     );
 
@@ -57,7 +57,7 @@ const getStatusBreakdown = async (req, res) => {
     const userId = new mongoose.Types.ObjectId(req.user.id);
     const breakdown = await Job.aggregate([
       {
-        $match: { userId },
+        $match: { userId, category: 'Jobs' },
       },
       {
         $group: {
@@ -87,6 +87,7 @@ const getTrends = async (req, res) => {
       {
         $match: {
           userId,
+          category: 'Jobs',
           createdAt: { $ne: null },
         },
       },
