@@ -340,26 +340,11 @@ export function Dashboard() {
           : ''
       }`}
     >
-<<<<<<< HEAD
-      <div className="relative h-28 overflow-hidden rounded-t-md">
-        <img
-          src={app.imageUrl}
-          alt={app.company}
-          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-          onError={(e) => {
-            (e.target as HTMLImageElement).src = `https://ui-avatars.com/api/?name=${encodeURIComponent(
-              app.company
-            )}&background=14213D&color=FCA311&size=256&bold=true&font-size=0.4`;
-          }}
-        />
-        <div className="absolute top-3 right-3 w-10 h-10 bg-[#14213D] rounded-md flex items-center justify-center text-white font-bold text-sm shadow-md">
-=======
       <div
         className="relative h-28 overflow-hidden flex items-center justify-center"
         style={{ background: getCompanyGradient(app.company) }}
       >
         <span className="text-white/20 font-bold text-5xl tracking-wider select-none">
->>>>>>> BugFixes
           {app.companyAcronym}
         </span>
         <div className="absolute top-3 right-3 w-10 h-10 bg-white rounded-md flex items-center justify-center shadow-md overflow-hidden">
@@ -389,15 +374,6 @@ export function Dashboard() {
             </h3>
             <p className="text-sm text-[#14213D]">{app.company}</p>
           </div>
-<<<<<<< HEAD
-          <a
-            href="#"
-            onClick={(e) => e.stopPropagation()}
-            className="flex-shrink-0 ml-2"
-          >
-            <ExternalLink className="w-4 h-4 text-[#14213D] opacity-40 hover:opacity-100 transition-opacity" />
-          </a>
-=======
           {app.url && (
             <a
               href={app.url}
@@ -410,7 +386,6 @@ export function Dashboard() {
               <ExternalLink className="w-4 h-4 text-[#14213D] opacity-40 hover:opacity-100 transition-opacity" />
             </a>
           )}
->>>>>>> BugFixes
         </div>
 
         <div className="flex items-center justify-between mt-4 gap-3">
